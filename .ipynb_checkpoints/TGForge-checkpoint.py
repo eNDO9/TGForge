@@ -40,8 +40,13 @@ async def authenticate_client():
             st.error(f"Error during authentication: {e}")
 
 # Step 3: Create an authentication button to start the process
-def start_authentication():
-    asyncio.run(authenticate_client())
+def run_async(func):
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:  # No event loop found, create one
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+    return loop.run_until_complete(func)
 
 if st.button("Authenticate"):
     if client:
@@ -50,6 +55,6 @@ if st.button("Authenticate"):
         st.write(f"API Hash: {api_hash}")
         st.write(f"Phone: {phone}")
         
-        start_authentication()
+        run_async(authenticate_client())
     else:
         st.error("Please provide valid API ID, API Hash, and Phone Number.")

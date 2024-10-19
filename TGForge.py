@@ -1,6 +1,6 @@
 import streamlit as st
-from telethon.sync import TelegramClient  # Use synchronous version for authentication
-from telethon import TelegramClient as AsyncTelegramClient  # For async operations if needed
+from telethon.sync import TelegramClient
+from telethon import TelegramClient as AsyncTelegramClient
 from telethon.errors import SessionPasswordNeededError
 import nest_asyncio
 import asyncio
@@ -26,7 +26,7 @@ phone = st.text_input("Phone Number (e.g., +1 5718671248)", value=default_phone)
 client = None
 async_client = None
 
-# Specify an absolute path for the session file
+# Define session file path
 session_path = os.path.join(os.getcwd(), "my_telegram_session")
 
 # Automatically delete existing session file if it exists
@@ -41,7 +41,7 @@ delete_session_file(session_path)
 
 if api_id and api_hash and phone:
     try:
-        # Use a specified session path for better control
+        # Use a specified session path in the local directory
         client = TelegramClient(session_path, api_id, api_hash)
         st.write("Credentials loaded. You can proceed with authentication.")
     except Exception as e:
@@ -64,18 +64,35 @@ def authenticate_client():
                 # Create an async client for further use, with the same session path
                 async_client = AsyncTelegramClient(session_path, api_id, api_hash)
                 st.write("Async client ready for further operations.")
+
+                # Provide download link for the session file
+                provide_session_download(session_path)
+
         else:
             # Create async client if already authorized
             async_client = AsyncTelegramClient(session_path, api_id, api_hash)
             st.success("Already authenticated. Async client ready for further operations.")
+
     except SessionPasswordNeededError:
         st.error("Your account is protected by a password. Please disable it for this demo.")
     except Exception as e:
         st.error(f"Error during authentication: {e}")
     finally:
         client.disconnect()
-        # Clean up temporary session files
-        delete_session_file(session_path)
+
+# Function to provide download link for the session file
+def provide_session_download(session_path):
+    session_file = f"{session_path}.session"
+    if os.path.exists(session_file):
+        with open(session_file, "rb") as file:
+            btn = st.download_button(
+                label="Download Session File",
+                data=file,
+                file_name="my_telegram_session.session",
+                mime="application/octet-stream"
+            )
+            if btn:
+                st.write("Session file downloaded. Save it securely.")
 
 # Step 3: Authenticate on button click
 if st.button("Authenticate"):

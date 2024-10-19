@@ -1,0 +1,4 @@
+telethon
+aioconsole
+pandas
+python-docx

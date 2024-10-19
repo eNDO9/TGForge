@@ -23,19 +23,20 @@ api_id = st.text_input("API ID", value=default_api_id)
 api_hash = st.text_input("API Hash", value=default_api_hash)
 phone = st.text_input("Phone Number (e.g., +1 5718671248)", value=default_phone)
 
+# Check to ensure values are being captured correctly
+st.write(f"API ID: {api_id}, API Hash: {api_hash}, Phone: {phone}")
+
 client = None
 async_client = None
 
-# Generate a unique session name based on the current time
-session_name = f"my_session_{datetime.now().strftime('%Y%m%d%H%M%S')}"
-
 if api_id and api_hash and phone:
     try:
-        # Use a unique session name for each run to avoid conflicts
-        client = TelegramClient(session_name, api_id, api_hash)
+        # Use the actual inputs from the user, not from secrets
+        client = TelegramClient("my_telegram_session", api_id, api_hash)
         st.write("Credentials loaded. You can proceed with authentication.")
     except Exception as e:
         st.error(f"Error initializing Telegram client: {e}")
+
 
 # Step 2: Function to authenticate synchronously
 def authenticate_client():

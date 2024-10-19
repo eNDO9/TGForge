@@ -19,6 +19,7 @@ phone = st.text_input("Phone Number (e.g., +1 5718671248)", value=default_phone)
 client = None
 if api_id and api_hash and phone:
     try:
+        # Initialize TelegramClient without starting any event loop
         client = TelegramClient('my_session', api_id, api_hash)
         st.write("Credentials loaded. You can proceed with authentication.")
     except Exception as e:
@@ -40,13 +41,8 @@ async def authenticate_client():
             st.error(f"Error during authentication: {e}")
 
 # Step 3: Create an authentication button to start the process
-def run_async(func):
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:  # No event loop found, create one
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-    return loop.run_until_complete(func)
+def start_authentication():
+    asyncio.run(authenticate_client())
 
 if st.button("Authenticate"):
     if client:
@@ -55,6 +51,6 @@ if st.button("Authenticate"):
         st.write(f"API Hash: {api_hash}")
         st.write(f"Phone: {phone}")
         
-        run_async(authenticate_client())
+        start_authentication()
     else:
         st.error("Please provide valid API ID, API Hash, and Phone Number.")

@@ -2,6 +2,11 @@ import streamlit as st
 from telethon.sync import TelegramClient  # Use synchronous version for authentication
 from telethon import TelegramClient as AsyncTelegramClient  # For async operations if needed
 from telethon.errors import SessionPasswordNeededError
+import nest_asyncio
+import asyncio
+
+# Apply nest_asyncio to allow nested event loops
+nest_asyncio.apply()
 
 # Load default credentials from st.secrets
 default_api_id = st.secrets["telegram"].get("api_id", "")
@@ -66,7 +71,7 @@ if st.button("Authenticate"):
         
         authenticate_client()
     else:
-        st.error("Please provide valid API ID, API Hash, and Phone Number.")
+        st.error("Please provide valid API ID, API Hash, and Phone Number...")
 
 # Optional: Example of async operations (you would call this later after authentication)
 async def perform_async_tasks():

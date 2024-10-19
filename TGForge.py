@@ -1,9 +1,11 @@
 import streamlit as st
 from telethon.sync import TelegramClient
-from telethon import TelegramClient as AsyncTelegramClient
+from telethon import TelegramClient as AsyncTelegramClient, functions
 from telethon.errors import SessionPasswordNeededError
 import nest_asyncio
 import asyncio
+import pandas as pd
+from docx import Document
 import os
 
 # Apply nest_asyncio to allow nested event loops
@@ -36,18 +38,24 @@ def delete_session_file(session_path):
         os.remove(session_file)
         st.write("Existing session file deleted.")
 
-# Delete the session file if it exists
-delete_session_file(session_path)
+# Check if session file already exists, indicating a previous successful login
+if os.path.exists(f"{session_path}.session"):
+    st.session_state['authenticated'] = True
+else:
+    st.session_state['authenticated'] = False
 
 if api_id and api_hash and phone:
     try:
         # Use a specified session path in the local directory
         client = TelegramClient(session_path, api_id, api_hash)
-        st.write("Credentials loaded. You can proceed with authentication.")
+        if st.session_state['authenticated']:
+            st.success("Already authenticated. Skipping reauthentication.")
+        else:
+            st.write("Credentials loaded. You can proceed with authentication.")
     except Exception as e:
         st.error(f"Error initializing Telegram client: {e}")
 
-# Step 2: Function to authenticate synchronously
+# Function to authenticate synchronously
 def authenticate_client():
     global client, async_client
     try:
@@ -63,15 +71,13 @@ def authenticate_client():
 
                 # Create an async client for further use, with the same session path
                 async_client = AsyncTelegramClient(session_path, api_id, api_hash)
-                st.write("Async client ready for further operations.")
-
-                # Provide download link for the session file
-                provide_session_download(session_path)
+                st.session_state['authenticated'] = True
 
         else:
             # Create async client if already authorized
             async_client = AsyncTelegramClient(session_path, api_id, api_hash)
             st.success("Already authenticated. Async client ready for further operations.")
+            st.session_state['authenticated'] = True
 
     except SessionPasswordNeededError:
         st.error("Your account is protected by a password. Please disable it for this demo.")
@@ -94,22 +100,97 @@ def provide_session_download(session_path):
             if btn:
                 st.write("Session file downloaded. Save it securely.")
 
-# Step 3: Authenticate on button click
-if st.button("Authenticate"):
-    if client:
-        # Print user's credentials for testing purposes
-        st.write(f"API ID: {api_id}")
-        st.write(f"API Hash: {api_hash}")
-        st.write(f"Phone: {phone}")
-        
-        authenticate_client()
-    else:
-        st.error("Please provide valid API ID, API Hash, and Phone Number.")
+# Step 2: UI to switch to the new feature once authenticated
+if st.session_state['authenticated']:
+    # Hide the authentication fields and show new functionality
+    st.title("Fetch Telegram Channel Information")
+    
+    # Input: channel names
+    channel_list_input = st.text_input(
+        "Please enter the channel name(s). Separate multiple channels with a comma:",
+        placeholder="e.g., channel_1, channel_2"
+    )
+    channel_list = [channel.strip() for channel in channel_list_input.split(",")]
+    
+    # Select output format
+    output_choice = st.selectbox(
+        "How would you like to save the output?",
+        ('xlsx', 'docx', 'print')
+    )
 
-# Optional: Example of async operations (you would call this later after authentication)
-async def perform_async_tasks():
-    if async_client:
-        await async_client.connect()
-        me = await async_client.get_me()
-        st.write(f"Logged in as: {me.username}")
-        await async_client.disconnect()
+    # Create a Word document object
+    doc = Document()
+    doc.add_heading('Telegram Channel Information', level=1)
+
+    async def get_first_valid_message_date(channel_name):
+        """Finds the date of the earliest available user-generated message in a channel."""
+        try:
+            channel = await async_client.get_entity(channel_name)
+            async for message in async_client.iter_messages(channel, reverse=True):
+                if message and not message.action:
+                    if message.text or message.media:
+                        return message.date.isoformat()
+            return "No user-generated messages found"
+        except Exception as e:
+            st.write(f"Error fetching the first message for {channel_name}: {e}")
+            return "Not Available"
+
+    async def get_channel_info(channel_name):
+        """Fetches detailed information about a Telegram channel."""
+        try:
+            result = await async_client(functions.channels.GetFullChannelRequest(channel=channel_name))
+
+            first_message_date = await get_first_valid_message_date(channel_name)
+            chat = result.chats[0]
+
+            # Extract relevant channel information
+            title = chat.title
+            description = result.full_chat.about.strip() if result.full_chat.about else 'No Description'
+            participants_count = result.full_chat.participants_count if hasattr(result.full_chat, 'participants_count') else 'Not Available'
+
+            # Display or return the gathered information as required
+            st.write(f"Channel Information for {title}:")
+            channel_info = {
+                "Title": title,
+                "Description": description,
+                "Participants": participants_count,
+                "First Message Date": first_message_date
+            }
+
+            if output_choice == 'docx':
+                doc.add_heading(f"Channel: {title}", level=2)
+                for key, value in channel_info.items():
+                    paragraph = doc.add_paragraph()
+                    paragraph.add_run(f"{key}: ").bold = True
+                    paragraph.add_run(str(value))
+                doc.add_paragraph("="*40)
+
+            return channel_info
+
+        except Exception as e:
+            st.write(f"Error fetching info for {channel_name}: {e}")
+            return None
+
+    # Button to start gathering information
+    if st.button("Fetch Information"):
+        asyncio.run(get_channel_info(channel_list[0]))
+        
+        # Provide output options
+        if output_choice == 'xlsx':
+            st.write("Saving as Excel (not yet implemented).")
+        elif output_choice == 'docx':
+            doc.save('Telegram_Channel_Info.docx')
+            st.download_button(
+                label="Download Document",
+                data=open('Telegram_Channel_Info.docx', 'rb').read(),
+                file_name='Telegram_Channel_Info.docx'
+            )
+        elif output_choice == 'print':
+            st.write("Printing data to the screen (not yet implemented).")
+
+else:
+    if st.button("Authenticate"):
+        if client:
+            authenticate_client()
+        else:
+            st.error("Please provide valid API ID, API Hash, and Phone Number.")

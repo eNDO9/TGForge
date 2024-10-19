@@ -4,7 +4,6 @@ from telethon import TelegramClient as AsyncTelegramClient  # For async operatio
 from telethon.errors import SessionPasswordNeededError
 import nest_asyncio
 import asyncio
-from datetime import datetime
 
 # Apply nest_asyncio to allow nested event loops
 nest_asyncio.apply()
@@ -26,13 +25,10 @@ phone = st.text_input("Phone Number (e.g., +1 5718671248)", value=default_phone)
 client = None
 async_client = None
 
-# Generate a unique session name based on the current time
-session_name = f"my_session_{datetime.now().strftime('%Y%m%d%H%M%S')}"
-
 if api_id and api_hash and phone:
     try:
-        # Use a unique session name for each run to avoid conflicts
-        client = TelegramClient(session_name, api_id, api_hash)
+        # Use an in-memory session for the initial connection
+        client = TelegramClient(':memory:', api_id, api_hash)
         st.write("Credentials loaded. You can proceed with authentication.")
     except Exception as e:
         st.error(f"Error initializing Telegram client: {e}")
@@ -51,12 +47,12 @@ def authenticate_client():
                 client.sign_in(phone, verification_code)
                 st.success("Authentication successful!")
 
-                # Create an async client for further use
-                async_client = AsyncTelegramClient(session_name, api_id, api_hash)
+                # Create an async client for further use, with a new unique session name
+                async_client = AsyncTelegramClient('authenticated_session', api_id, api_hash)
                 st.write("Async client ready for further operations.")
         else:
             # Create async client if already authorized
-            async_client = AsyncTelegramClient(session_name, api_id, api_hash)
+            async_client = AsyncTelegramClient('authenticated_session', api_id, api_hash)
             st.success("Already authenticated. Async client ready for further operations.")
     except SessionPasswordNeededError:
         st.error("Your account is protected by a password. Please disable it for this demo.")

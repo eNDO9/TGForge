@@ -1,4 +1,6 @@
 telethon
 aioconsole
 pandas
+nest_asyncio
+streamlit
 python-docx

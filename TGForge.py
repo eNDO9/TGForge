@@ -31,18 +31,6 @@ st.write(f"API ID: {api_id}, API Hash: {api_hash}, Phone: {phone}")
 client = None
 async_client = None
 
-<<<<<<< HEAD
-if api_id and api_hash and phone:
-    try:
-        # Use the actual inputs from the user, not from secrets
-        client = TelegramClient("my_telegram_session", api_id, api_hash)
-        st.write("Credentials loaded. You can proceed with authentication.")
-    except Exception as e:
-        st.error(f"Error initializing Telegram client: {e}")
-
-
-# Step 2: Function to authenticate synchronously
-=======
 # Define session file path
 session_path = os.path.join(os.getcwd(), "my_telegram_session")
 
@@ -71,7 +59,6 @@ if api_id and api_hash and phone:
         st.error(f"Error initializing Telegram client: {e}")
 
 # Function to authenticate synchronously
->>>>>>> 350dd1b9e3101422e6f7f57ca3efebd72141da41
 def authenticate_client():
     global client, async_client
     try:

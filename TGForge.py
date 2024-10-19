@@ -4,6 +4,7 @@ from telethon import TelegramClient as AsyncTelegramClient  # For async operatio
 from telethon.errors import SessionPasswordNeededError
 import nest_asyncio
 import asyncio
+import os
 
 # Apply nest_asyncio to allow nested event loops
 nest_asyncio.apply()
@@ -25,10 +26,23 @@ phone = st.text_input("Phone Number (e.g., +1 5718671248)", value=default_phone)
 client = None
 async_client = None
 
+# Specify an absolute path for the session file
+session_path = os.path.join(os.getcwd(), "my_telegram_session")
+
+# Automatically delete existing session file if it exists
+def delete_session_file(session_path):
+    session_file = f"{session_path}.session"
+    if os.path.exists(session_file):
+        os.remove(session_file)
+        st.write("Existing session file deleted.")
+
+# Delete the session file if it exists
+delete_session_file(session_path)
+
 if api_id and api_hash and phone:
     try:
-        # Use an in-memory session for the initial connection
-        client = TelegramClient(':memory:', api_id, api_hash)
+        # Use a specified session path for better control
+        client = TelegramClient(session_path, api_id, api_hash)
         st.write("Credentials loaded. You can proceed with authentication.")
     except Exception as e:
         st.error(f"Error initializing Telegram client: {e}")
@@ -47,12 +61,12 @@ def authenticate_client():
                 client.sign_in(phone, verification_code)
                 st.success("Authentication successful!")
 
-                # Create an async client for further use, with a new unique session name
-                async_client = AsyncTelegramClient('authenticated_session', api_id, api_hash)
+                # Create an async client for further use, with the same session path
+                async_client = AsyncTelegramClient(session_path, api_id, api_hash)
                 st.write("Async client ready for further operations.")
         else:
             # Create async client if already authorized
-            async_client = AsyncTelegramClient('authenticated_session', api_id, api_hash)
+            async_client = AsyncTelegramClient(session_path, api_id, api_hash)
             st.success("Already authenticated. Async client ready for further operations.")
     except SessionPasswordNeededError:
         st.error("Your account is protected by a password. Please disable it for this demo.")
@@ -60,6 +74,8 @@ def authenticate_client():
         st.error(f"Error during authentication: {e}")
     finally:
         client.disconnect()
+        # Clean up temporary session files
+        delete_session_file(session_path)
 
 # Step 3: Authenticate on button click
 if st.button("Authenticate"):

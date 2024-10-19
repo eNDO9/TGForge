@@ -24,4 +24,4 @@ from docx import Document
 
 import streamlit as st
 
-st.print('TGForge is a cool name')
+st.write('TGForge is a cool name')

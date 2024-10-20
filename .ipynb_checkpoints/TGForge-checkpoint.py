@@ -12,10 +12,17 @@ def delete_session_file(session_path):
     session_file = f"{session_path}.session"
     if os.path.exists(session_file):
         os.remove(session_file)
+        st.write("Existing session file deleted. You can try authenticating again.")
 
 # Check if session file exists to determine authentication status
 if os.path.exists(f"{session_path}.session"):
     st.title("Authenticated")
+    # Print the saved information
+    st.write("Credentials:")
+    st.write(f"API ID: {st.secrets['telegram']['api_id']}")
+    st.write(f"API Hash: {st.secrets['telegram']['api_hash']}")
+    st.write(f"Phone: {st.secrets['telegram']['phone']}")
+    st.write(f"Session File Path: {session_path}.session")
 else:
     # Load default credentials from st.secrets
     default_api_id = st.secrets["telegram"].get("api_id", "")

@@ -33,8 +33,10 @@ def get_or_create_eventloop():
 if "loop" not in st.session_state:
     st.session_state.loop = get_or_create_eventloop()
 
-# Check if session file exists to determine authentication status
-if os.path.exists(f"{session_path}.session"):
+# Check authentication status based on session file or session state
+authenticated = os.path.exists(f"{session_path}.session") or st.session_state.get("authenticated")
+
+if authenticated:
     st.title("Authenticated")
     st.write("You are authenticated. You can now fetch information from Telegram channels.")
     
@@ -73,6 +75,7 @@ if os.path.exists(f"{session_path}.session"):
             st.session_state.loop.run_until_complete(get_channel_info(channel_name))
         else:
             st.error("Please enter a channel name.")
+
 else:
     # Load default credentials from st.secrets
     default_api_id = st.secrets["telegram"].get("api_id", "")

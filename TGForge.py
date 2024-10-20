@@ -35,15 +35,17 @@ async_client = None
 session_dir = os.getcwd()  # Current directory, you can change to a specific path if needed
 session_path = os.path.join(session_dir, "my_telegram_session")
 
-# Print out where the session file should be
-st.write(f"Session file will be saved at: {session_path}.session")
-
-# Automatically delete existing session file if it exists
+# Function to delete the session file
 def delete_session_file(session_path):
     session_file = f"{session_path}.session"
     if os.path.exists(session_file):
         os.remove(session_file)
-        st.write("Existing session file deleted.")
+        st.write("Existing session file deleted. You can try authenticating again.")
+
+# Automatically check and clean if necessary
+if "retry_authentication" in st.session_state and st.session_state["retry_authentication"]:
+    delete_session_file(session_path)
+    st.session_state["retry_authentication"] = False
 
 # Check if session file already exists, indicating a previous successful login
 if os.path.exists(f"{session_path}.session"):
@@ -65,8 +67,13 @@ if api_id and api_hash and phone:
         else:
             st.write("Credentials loaded. You can proceed with authentication.")
     except Exception as e:
-        st.error(f"Error initializing Telegram client: {e}")
-
+        if "database is locked" in str(e).lower():
+            st.error("Database is locked. Trying to resolve...")
+            # Set a flag to delete the session file and retry authentication
+            st.session_state["retry_authentication"] = True
+            st.experimental_rerun()
+        else:
+            st.error(f"Error initializing Telegram client: {e}")
 
 # Function to authenticate synchronously
 def authenticate_client():
@@ -95,7 +102,13 @@ def authenticate_client():
     except SessionPasswordNeededError:
         st.error("Your account is protected by a password. Please disable it for this demo.")
     except Exception as e:
-        st.error(f"Error during authentication: {e}")
+        if "database is locked" in str(e).lower():
+            st.error("Database is locked. Attempting to delete the session file and retry...")
+            # Trigger session file deletion and retry
+            st.session_state["retry_authentication"] = True
+            st.experimental_rerun()
+        else:
+            st.error(f"Error during authentication: {e}")
     finally:
         client.disconnect()
 

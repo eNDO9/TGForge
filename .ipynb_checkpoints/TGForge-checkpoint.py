@@ -31,8 +31,12 @@ st.write(f"API ID: {api_id}, API Hash: {api_hash}, Phone: {phone}")
 client = None
 async_client = None
 
-# Define session file path
-session_path = os.path.join(os.getcwd(), "my_telegram_session")
+# Define explicit session file path, ensure directory is visible
+session_dir = os.getcwd()  # Current directory, you can change to a specific path if needed
+session_path = os.path.join(session_dir, "my_telegram_session")
+
+# Print out where the session file should be
+st.write(f"Session file will be saved at: {session_path}.session")
 
 # Automatically delete existing session file if it exists
 def delete_session_file(session_path):
@@ -51,12 +55,18 @@ if api_id and api_hash and phone:
     try:
         # Use a specified session path in the local directory
         client = TelegramClient(session_path, api_id, api_hash)
-        if st.session_state['authenticated']:
+        
+        # Check if the session is already authenticated
+        if st.session_state.get('authenticated'):
             st.success("Already authenticated. Skipping reauthentication.")
+            
+            # Ensure async_client is initialized even when reusing the session
+            async_client = AsyncTelegramClient(session_path, api_id, api_hash)
         else:
             st.write("Credentials loaded. You can proceed with authentication.")
     except Exception as e:
         st.error(f"Error initializing Telegram client: {e}")
+
 
 # Function to authenticate synchronously
 def authenticate_client():

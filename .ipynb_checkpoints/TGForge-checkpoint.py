@@ -1,7 +1,12 @@
 import streamlit as st
-from telethon.sync import TelegramClient
+from telethon import TelegramClient
 from telethon.errors import SessionPasswordNeededError
+import nest_asyncio
+import asyncio
 import os
+
+# Apply nest_asyncio to allow nested event loops
+nest_asyncio.apply()
 
 # Define session file path
 session_dir = os.getcwd()
@@ -42,25 +47,25 @@ else:
     if "verification_code" not in st.session_state:
         st.session_state.verification_code = ""
 
-    # Function to authenticate the user
-    def authenticate_client(api_id, api_hash, phone):
+    # Function to authenticate the user asynchronously
+    async def authenticate_client(api_id, api_hash, phone):
         try:
             # Delete existing session file if there is any
             delete_session_file(session_path)
             
             # Create a new TelegramClient instance
             client = TelegramClient(session_path, api_id, api_hash)
-            client.connect()
+            await client.connect()
 
             # Check if already authorized
-            if not client.is_user_authorized():
-                client.send_code_request(phone)
+            if not await client.is_user_authorized():
+                await client.send_code_request(phone)
                 st.write("A verification code has been sent to your Telegram account.")
                 
                 st.session_state.verification_code = st.text_input("Enter the verification code:", "")
 
                 if st.button("Verify"):
-                    client.sign_in(phone, st.session_state.verification_code)
+                    await client.sign_in(phone, st.session_state.verification_code)
                     st.success("Authentication successful!")
                     
                     # Save the credentials to Streamlit secrets
@@ -79,7 +84,7 @@ else:
                 st.session_state.authenticated = True
                 
             # Disconnect after authentication to avoid database locks
-            client.disconnect()
+            await client.disconnect()
 
         except SessionPasswordNeededError:
             st.error("Your account is protected by a password. Please disable it for this demo.")
@@ -91,7 +96,7 @@ else:
     # Check if inputs are provided and start the authentication process
     if st.button("Authenticate"):
         if api_id and api_hash and phone:
-            authenticate_client(api_id, api_hash, phone)
+            asyncio.run(authenticate_client(api_id, api_hash, phone))
         else:
             st.error("Please enter valid API ID, API Hash, and Phone Number.")
 

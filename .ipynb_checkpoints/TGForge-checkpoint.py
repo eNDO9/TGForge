@@ -43,7 +43,13 @@ channel_name = st.text_input("Enter the Telegram channel username (e.g., 'unity_
 # Function to get basic channel info
 async def get_channel_info(channel_name):
     try:
-        client = TelegramClient(session_path, st.secrets["telegram"]["api_id"], st.secrets["telegram"]["api_hash"])
+        api_id = st.secrets["telegram"].get("api_id")
+        api_hash = st.secrets["telegram"].get("api_hash")
+
+        # Debugging: Print API ID and API Hash
+        st.write(f"Using API ID: {api_id}, API Hash: {api_hash}")
+        
+        client = TelegramClient(session_path, api_id, api_hash)
         await client.connect()
 
         # Fetch channel information

@@ -38,8 +38,9 @@ else:
     api_hash = st.text_input("API Hash", value=default_api_hash)
     phone = st.text_input("Phone Number (e.g., +1 5718671248)", value=default_phone)
 
-    # Check to ensure values are being captured correctly
-    st.write(f"API ID: {api_id}, API Hash: {api_hash}, Phone: {phone}")
+    # Store verification code entry in session state to ensure it only appears during authentication
+    if "verification_code" not in st.session_state:
+        st.session_state.verification_code = ""
 
     # Function to authenticate the user
     def authenticate_client(api_id, api_hash, phone):
@@ -56,10 +57,10 @@ else:
                 client.send_code_request(phone)
                 st.write("A verification code has been sent to your Telegram account.")
                 
-                verification_code = st.text_input("Enter the verification code:", "")
-                
+                st.session_state.verification_code = st.text_input("Enter the verification code:", "")
+
                 if st.button("Verify"):
-                    client.sign_in(phone, verification_code)
+                    client.sign_in(phone, st.session_state.verification_code)
                     st.success("Authentication successful!")
                     
                     # Save the credentials to Streamlit secrets
@@ -70,10 +71,12 @@ else:
                     }
                     
                     # Show confirmation message and reload the app to show "Authenticated"
+                    st.session_state.authenticated = True
                     st.experimental_rerun()
 
             else:
                 st.success("Already authenticated.")
+                st.session_state.authenticated = True
                 
             # Disconnect after authentication to avoid database locks
             client.disconnect()

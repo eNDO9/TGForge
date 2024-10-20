@@ -1,38 +1,10 @@
 import streamlit as st
 from telethon.sync import TelegramClient
-from telethon import TelegramClient as AsyncTelegramClient, functions
 from telethon.errors import SessionPasswordNeededError
-import nest_asyncio
-import asyncio
-import pandas as pd
-from docx import Document
 import os
 
-# Apply nest_asyncio to allow nested event loops
-nest_asyncio.apply()
-
-# Load default credentials from st.secrets
-default_api_id = st.secrets["telegram"].get("api_id", "")
-default_api_hash = st.secrets["telegram"].get("api_hash", "")
-default_phone = st.secrets["telegram"].get("phone", "")
-
-# Step 1: Create Streamlit input fields for user credentials
-st.title("Telegram Authentication")
-st.write("Enter your Telegram API credentials or use the saved defaults.")
-
-# Prompt user to input their credentials, with defaults pre-filled
-api_id = st.text_input("API ID", value=default_api_id)
-api_hash = st.text_input("API Hash", value=default_api_hash)
-phone = st.text_input("Phone Number (e.g., +1 5718671248)", value=default_phone)
-
-# Check to ensure values are being captured correctly
-st.write(f"API ID: {api_id}, API Hash: {api_hash}, Phone: {phone}")
-
-client = None
-async_client = None
-
-# Define explicit session file path, ensure directory is visible
-session_dir = os.getcwd()  # Current directory, you can change to a specific path if needed
+# Define session file path
+session_dir = os.getcwd()
 session_path = os.path.join(session_dir, "my_telegram_session")
 
 # Function to delete the session file
@@ -40,210 +12,82 @@ def delete_session_file(session_path):
     session_file = f"{session_path}.session"
     if os.path.exists(session_file):
         os.remove(session_file)
-        st.write("Existing session file deleted. You can try authenticating again.")
 
-# Automatically check and clean if necessary
-if "retry_authentication" in st.session_state and st.session_state["retry_authentication"]:
-    delete_session_file(session_path)
-    st.session_state["retry_authentication"] = False
-
-# Check if session file already exists, indicating a previous successful login
+# Check if session file exists to determine authentication status
 if os.path.exists(f"{session_path}.session"):
-    st.session_state['authenticated'] = True
+    st.title("Authenticated")
 else:
-    st.session_state['authenticated'] = False
+    # Load default credentials from st.secrets
+    default_api_id = st.secrets["telegram"].get("api_id", "")
+    default_api_hash = st.secrets["telegram"].get("api_hash", "")
+    default_phone = st.secrets["telegram"].get("phone", "")
 
-# Function to initialize async client
-def initialize_async_client(api_id, api_hash, session_path):
-    global async_client
-    try:
-        async_client = AsyncTelegramClient(session_path, api_id, api_hash)
-        # Explicitly start the async client if not already running
-        asyncio.run(async_client.start())
-    except Exception as e:
-        st.error(f"Error initializing async Telegram client: {e}")
+    # Step 1: Create Streamlit input fields for user credentials
+    st.title("Telegram Authentication")
+    st.write("Enter your Telegram API credentials to authenticate.")
 
-if api_id and api_hash and phone:
-    try:
-        # Use a specified session path in the local directory
-        client = TelegramClient(session_path, api_id, api_hash)
-        
-        # Check if the session is already authenticated
-        if st.session_state.get('authenticated'):
-            st.success("Already authenticated. Skipping reauthentication.")
-            
-            # Ensure async_client is initialized even when reusing the session
-            initialize_async_client(api_id, api_hash, session_path)
-        else:
-            st.write("Credentials loaded. You can proceed with authentication.")
-    except Exception as e:
-        if "database is locked" in str(e).lower():
-            st.error("Database is locked. Trying to resolve...")
-            # Set a flag to delete the session file and retry authentication
-            st.session_state["retry_authentication"] = True
-            st.warning("Database lock detected. Click 'Retry Authentication' to proceed.")
-        else:
-            st.error(f"Error initializing Telegram client: {e}")
+    # Prompt user to input their credentials, with defaults pre-filled
+    api_id = st.text_input("API ID", value=default_api_id)
+    api_hash = st.text_input("API Hash", value=default_api_hash)
+    phone = st.text_input("Phone Number (e.g., +1 5718671248)", value=default_phone)
 
-# Function to authenticate synchronously
-def authenticate_client():
-    global client, async_client
-    try:
-        client.connect()
-        if not client.is_user_authorized():
-            client.send_code_request(phone)
-            st.write("A verification code has been sent to your Telegram account.")
-            
-            verification_code = st.text_input("Enter the verification code:", "")
-            if st.button("Verify"):
-                client.sign_in(phone, verification_code)
-                st.success("Authentication successful!")
+    # Check to ensure values are being captured correctly
+    st.write(f"API ID: {api_id}, API Hash: {api_hash}, Phone: {phone}")
 
-                # Create an async client for further use, with the same session path
-                initialize_async_client(api_id, api_hash, session_path)
-                st.session_state['authenticated'] = True
-
-        else:
-            # Create async client if already authorized
-            initialize_async_client(api_id, api_hash, session_path)
-            st.success("Already authenticated. Async client ready for further operations.")
-            st.session_state['authenticated'] = True
-
-    except SessionPasswordNeededError:
-        st.error("Your account is protected by a password. Please disable it for this demo.")
-    except Exception as e:
-        if "database is locked" in str(e).lower():
-            st.error("Database is locked. Attempting to delete the session file and retry...")
-            # Trigger session file deletion and prompt for retry
-            st.session_state["retry_authentication"] = True
-            st.warning("Click 'Retry Authentication' to proceed.")
-        else:
-            st.error(f"Error during authentication: {e}")
-    finally:
-        client.disconnect()
-
-# Retry Button if the database is locked
-if st.session_state.get("retry_authentication"):
-    if st.button("Retry Authentication"):
-        delete_session_file(session_path)
-        st.session_state["retry_authentication"] = False
-        st.experimental_rerun()
-
-# Function to provide download link for the session file
-def provide_session_download(session_path):
-    session_file = f"{session_path}.session"
-    if os.path.exists(session_file):
-        with open(session_file, "rb") as file:
-            btn = st.download_button(
-                label="Download Session File",
-                data=file,
-                file_name="my_telegram_session.session",
-                mime="application/octet-stream"
-            )
-            if btn:
-                st.write("Session file downloaded. Save it securely.")
-
-# Step 2: UI to switch to the new feature once authenticated
-if st.session_state['authenticated']:
-    # Hide the authentication fields and show new functionality
-    st.title("Fetch Telegram Channel Information")
-    
-    # Input: channel names
-    channel_list_input = st.text_input(
-        "Please enter the channel name(s). Separate multiple channels with a comma:",
-        placeholder="e.g., channel_1, channel_2"
-    )
-    channel_list = [channel.strip() for channel in channel_list_input.split(",")]
-    
-    # Select output format
-    output_choice = st.selectbox(
-        "How would you like to save the output?",
-        ('xlsx', 'docx', 'print')
-    )
-
-    # Create a Word document object
-    doc = Document()
-    doc.add_heading('Telegram Channel Information', level=1)
-
-    async def get_first_valid_message_date(channel_name):
-        """Finds the date of the earliest available user-generated message in a channel."""
+    # Function to authenticate the user
+    def authenticate_client(api_id, api_hash, phone):
         try:
-            channel = await async_client.get_entity(channel_name)
-            async for message in async_client.iter_messages(channel, reverse=True):
-                if message and not message.action:
-                    if message.text or message.media:
-                        return message.date.isoformat()
-            return "No user-generated messages found"
-        except Exception as e:
-            st.write(f"Error fetching the first message for {channel_name}: {e}")
-            return "Not Available"
+            # Delete existing session file if there is any
+            delete_session_file(session_path)
+            
+            # Create a new TelegramClient instance
+            client = TelegramClient(session_path, api_id, api_hash)
+            client.connect()
 
-    async def get_channel_info(channel_name):
-        """Fetches detailed information about a Telegram channel."""
-        try:
-            if async_client is None:
-                st.error("Async client not initialized. Please re-authenticate.")
-                return None
+            # Check if already authorized
+            if not client.is_user_authorized():
+                client.send_code_request(phone)
+                st.write("A verification code has been sent to your Telegram account.")
                 
-            if not async_client.is_connected():
-                await async_client.connect()
+                verification_code = st.text_input("Enter the verification code:", "")
+                
+                if st.button("Verify"):
+                    client.sign_in(phone, verification_code)
+                    st.success("Authentication successful!")
+                    
+                    # Save the credentials to Streamlit secrets
+                    st.secrets["telegram"] = {
+                        "api_id": api_id,
+                        "api_hash": api_hash,
+                        "phone": phone
+                    }
+                    
+                    # Show confirmation message and reload the app to show "Authenticated"
+                    st.experimental_rerun()
 
-            result = await async_client(functions.channels.GetFullChannelRequest(channel=channel_name))
+            else:
+                st.success("Already authenticated.")
+                
+            # Disconnect after authentication to avoid database locks
+            client.disconnect()
 
-            first_message_date = await get_first_valid_message_date(channel_name)
-            chat = result.chats[0]
-
-            # Extract relevant channel information
-            title = chat.title
-            description = result.full_chat.about.strip() if result.full_chat.about else 'No Description'
-            participants_count = result.full_chat.participants_count if hasattr(result.full_chat, 'participants_count') else 'Not Available'
-
-            # Display or return the gathered information as required
-            st.write(f"Channel Information for {title}:")
-            channel_info = {
-                "Title": title,
-                "Description": description,
-                "Participants": participants_count,
-                "First Message Date": first_message_date
-            }
-
-            if output_choice == 'docx':
-                doc.add_heading(f"Channel: {title}", level=2)
-                for key, value in channel_info.items():
-                    paragraph = doc.add_paragraph()
-                    paragraph.add_run(f"{key}: ").bold = True
-                    paragraph.add_run(str(value))
-                doc.add_paragraph("="*40)
-
-            return channel_info
-
+        except SessionPasswordNeededError:
+            st.error("Your account is protected by a password. Please disable it for this demo.")
         except Exception as e:
-            st.write(f"Error fetching info for {channel_name}: {e}")
-            return None
+            st.error(f"Error during authentication: {e}")
+            # Make sure to clean up session if there's an error
+            delete_session_file(session_path)
 
-    # Button to start gathering information
-    if st.button("Fetch Information"):
-        if channel_list:
-            asyncio.run(get_channel_info(channel_list[0]))
-        else:
-            st.error("Please enter at least one channel name.")
-        
-        # Provide output options
-        if output_choice == 'xlsx':
-            st.write("Saving as Excel (not yet implemented).")
-        elif output_choice == 'docx':
-            doc.save('Telegram_Channel_Info.docx')
-            st.download_button(
-                label="Download Document",
-                data=open('Telegram_Channel_Info.docx', 'rb').read(),
-                file_name='Telegram_Channel_Info.docx'
-            )
-        elif output_choice == 'print':
-            st.write("Printing data to the screen (not yet implemented).")
-
-else:
+    # Check if inputs are provided and start the authentication process
     if st.button("Authenticate"):
-        if client:
-            authenticate_client()
+        if api_id and api_hash and phone:
+            authenticate_client(api_id, api_hash, phone)
         else:
-            st.error("Please provide valid API ID, API Hash, and Phone Number.")
+            st.error("Please enter valid API ID, API Hash, and Phone Number.")
+
+# Automatically delete existing session if the "database is locked" error occurs
+try:
+    delete_session_file(session_path)
+except Exception as e:
+    st.write("Attempting to resolve potential session issues...")
+    delete_session_file(session_path)

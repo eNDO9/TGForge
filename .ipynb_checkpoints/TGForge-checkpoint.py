@@ -53,6 +53,16 @@ if os.path.exists(f"{session_path}.session"):
 else:
     st.session_state['authenticated'] = False
 
+# Function to initialize async client
+def initialize_async_client(api_id, api_hash, session_path):
+    global async_client
+    try:
+        async_client = AsyncTelegramClient(session_path, api_id, api_hash)
+        # Explicitly start the async client if not already running
+        asyncio.run(async_client.start())
+    except Exception as e:
+        st.error(f"Error initializing async Telegram client: {e}")
+
 if api_id and api_hash and phone:
     try:
         # Use a specified session path in the local directory
@@ -63,7 +73,7 @@ if api_id and api_hash and phone:
             st.success("Already authenticated. Skipping reauthentication.")
             
             # Ensure async_client is initialized even when reusing the session
-            async_client = AsyncTelegramClient(session_path, api_id, api_hash)
+            initialize_async_client(api_id, api_hash, session_path)
         else:
             st.write("Credentials loaded. You can proceed with authentication.")
     except Exception as e:
@@ -90,12 +100,12 @@ def authenticate_client():
                 st.success("Authentication successful!")
 
                 # Create an async client for further use, with the same session path
-                async_client = AsyncTelegramClient(session_path, api_id, api_hash)
+                initialize_async_client(api_id, api_hash, session_path)
                 st.session_state['authenticated'] = True
 
         else:
             # Create async client if already authorized
-            async_client = AsyncTelegramClient(session_path, api_id, api_hash)
+            initialize_async_client(api_id, api_hash, session_path)
             st.success("Already authenticated. Async client ready for further operations.")
             st.session_state['authenticated'] = True
 
@@ -118,7 +128,7 @@ if st.session_state.get("retry_authentication"):
         delete_session_file(session_path)
         st.session_state["retry_authentication"] = False
         st.experimental_rerun()
-        
+
 # Function to provide download link for the session file
 def provide_session_download(session_path):
     session_file = f"{session_path}.session"
@@ -171,6 +181,13 @@ if st.session_state['authenticated']:
     async def get_channel_info(channel_name):
         """Fetches detailed information about a Telegram channel."""
         try:
+            if async_client is None:
+                st.error("Async client not initialized. Please re-authenticate.")
+                return None
+                
+            if not async_client.is_connected():
+                await async_client.connect()
+
             result = await async_client(functions.channels.GetFullChannelRequest(channel=channel_name))
 
             first_message_date = await get_first_valid_message_date(channel_name)
@@ -206,7 +223,10 @@ if st.session_state['authenticated']:
 
     # Button to start gathering information
     if st.button("Fetch Information"):
-        asyncio.run(get_channel_info(channel_list[0]))
+        if channel_list:
+            asyncio.run(get_channel_info(channel_list[0]))
+        else:
+            st.error("Please enter at least one channel name.")
         
         # Provide output options
         if output_choice == 'xlsx':

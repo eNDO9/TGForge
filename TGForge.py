@@ -118,3 +118,112 @@ if st.session_state.get("retry_authentication"):
         delete_session_file(session_path)
         st.session_state["retry_authentication"] = False
         st.experimental_rerun()
+        
+# Function to provide download link for the session file
+def provide_session_download(session_path):
+    session_file = f"{session_path}.session"
+    if os.path.exists(session_file):
+        with open(session_file, "rb") as file:
+            btn = st.download_button(
+                label="Download Session File",
+                data=file,
+                file_name="my_telegram_session.session",
+                mime="application/octet-stream"
+            )
+            if btn:
+                st.write("Session file downloaded. Save it securely.")
+
+# Step 2: UI to switch to the new feature once authenticated
+if st.session_state['authenticated']:
+    # Hide the authentication fields and show new functionality
+    st.title("Fetch Telegram Channel Information")
+    
+    # Input: channel names
+    channel_list_input = st.text_input(
+        "Please enter the channel name(s). Separate multiple channels with a comma:",
+        placeholder="e.g., channel_1, channel_2"
+    )
+    channel_list = [channel.strip() for channel in channel_list_input.split(",")]
+    
+    # Select output format
+    output_choice = st.selectbox(
+        "How would you like to save the output?",
+        ('xlsx', 'docx', 'print')
+    )
+
+    # Create a Word document object
+    doc = Document()
+    doc.add_heading('Telegram Channel Information', level=1)
+
+    async def get_first_valid_message_date(channel_name):
+        """Finds the date of the earliest available user-generated message in a channel."""
+        try:
+            channel = await async_client.get_entity(channel_name)
+            async for message in async_client.iter_messages(channel, reverse=True):
+                if message and not message.action:
+                    if message.text or message.media:
+                        return message.date.isoformat()
+            return "No user-generated messages found"
+        except Exception as e:
+            st.write(f"Error fetching the first message for {channel_name}: {e}")
+            return "Not Available"
+
+    async def get_channel_info(channel_name):
+        """Fetches detailed information about a Telegram channel."""
+        try:
+            result = await async_client(functions.channels.GetFullChannelRequest(channel=channel_name))
+
+            first_message_date = await get_first_valid_message_date(channel_name)
+            chat = result.chats[0]
+
+            # Extract relevant channel information
+            title = chat.title
+            description = result.full_chat.about.strip() if result.full_chat.about else 'No Description'
+            participants_count = result.full_chat.participants_count if hasattr(result.full_chat, 'participants_count') else 'Not Available'
+
+            # Display or return the gathered information as required
+            st.write(f"Channel Information for {title}:")
+            channel_info = {
+                "Title": title,
+                "Description": description,
+                "Participants": participants_count,
+                "First Message Date": first_message_date
+            }
+
+            if output_choice == 'docx':
+                doc.add_heading(f"Channel: {title}", level=2)
+                for key, value in channel_info.items():
+                    paragraph = doc.add_paragraph()
+                    paragraph.add_run(f"{key}: ").bold = True
+                    paragraph.add_run(str(value))
+                doc.add_paragraph("="*40)
+
+            return channel_info
+
+        except Exception as e:
+            st.write(f"Error fetching info for {channel_name}: {e}")
+            return None
+
+    # Button to start gathering information
+    if st.button("Fetch Information"):
+        asyncio.run(get_channel_info(channel_list[0]))
+        
+        # Provide output options
+        if output_choice == 'xlsx':
+            st.write("Saving as Excel (not yet implemented).")
+        elif output_choice == 'docx':
+            doc.save('Telegram_Channel_Info.docx')
+            st.download_button(
+                label="Download Document",
+                data=open('Telegram_Channel_Info.docx', 'rb').read(),
+                file_name='Telegram_Channel_Info.docx'
+            )
+        elif output_choice == 'print':
+            st.write("Printing data to the screen (not yet implemented).")
+
+else:
+    if st.button("Authenticate"):
+        if client:
+            authenticate_client()
+        else:
+            st.error("Please provide valid API ID, API Hash, and Phone Number.")

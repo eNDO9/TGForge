@@ -36,55 +36,52 @@ if "loop" not in st.session_state:
 # Check authentication status based on session file or session state
 authenticated = os.path.exists(f"{session_path}.session") or st.session_state.get("authenticated")
 
-if authenticated:
-    st.title("Authenticated")
-    st.write("You are authenticated. You can now fetch information from Telegram channels.")
-    
-    # Input: channel name for test call
-    channel_name = st.text_input("Enter the Telegram channel username (e.g., 'unity_of_fields') for test call:")
+# Input: channel name for test call, always visible
+st.title("Fetch Telegram Channel Information")
+channel_name = st.text_input("Enter the Telegram channel username (e.g., 'unity_of_fields') for test call:")
 
-    # Function to get basic channel info
-    async def get_channel_info(channel_name):
-        try:
-            client = TelegramClient(session_path, st.secrets["telegram"]["api_id"], st.secrets["telegram"]["api_hash"])
-            await client.connect()
-            
-            # Fetch channel information
-            result = await client(functions.channels.GetFullChannelRequest(channel=channel_name))
-            chat = result.chats[0]
+# Function to get basic channel info
+async def get_channel_info(channel_name):
+    try:
+        client = TelegramClient(session_path, st.secrets["telegram"]["api_id"], st.secrets["telegram"]["api_hash"])
+        await client.connect()
 
-            # Extract relevant channel information
-            title = chat.title
-            description = result.full_chat.about.strip() if result.full_chat.about else 'No Description'
-            participants_count = result.full_chat.participants_count if hasattr(result.full_chat, 'participants_count') else 'Not Available'
+        # Fetch channel information
+        result = await client(functions.channels.GetFullChannelRequest(channel=channel_name))
+        chat = result.chats[0]
 
-            # Display the gathered information
-            st.write(f"Channel Information for {title}:")
-            st.write(f"Title: {title}")
-            st.write(f"Description: {description}")
-            st.write(f"Number of Participants: {participants_count}")
+        # Extract relevant channel information
+        title = chat.title
+        description = result.full_chat.about.strip() if result.full_chat.about else 'No Description'
+        participants_count = result.full_chat.participants_count if hasattr(result.full_chat, 'participants_count') else 'Not Available'
 
-            await client.disconnect()
+        # Display the gathered information
+        st.write(f"Channel Information for {title}:")
+        st.write(f"Title: {title}")
+        st.write(f"Description: {description}")
+        st.write(f"Number of Participants: {participants_count}")
 
-        except Exception as e:
-            st.error(f"Error fetching info for {channel_name}: {e}")
+        await client.disconnect()
 
-    # Button to fetch the information
-    if st.button("Fetch Channel Info"):
-        if channel_name:
-            st.session_state.loop.run_until_complete(get_channel_info(channel_name))
-        else:
-            st.error("Please enter a channel name.")
+    except Exception as e:
+        st.error(f"Error fetching info for {channel_name}: {e}")
 
-else:
+# Button to fetch the information
+if st.button("Fetch Channel Info"):
+    if channel_name:
+        st.session_state.loop.run_until_complete(get_channel_info(channel_name))
+    else:
+        st.error("Please enter a channel name.")
+
+# Step 1: Create Streamlit input fields for user credentials if not authenticated
+if not authenticated:
+    st.title("Telegram Authentication")
+    st.write("Enter your Telegram API credentials to authenticate.")
+
     # Load default credentials from st.secrets
     default_api_id = st.secrets["telegram"].get("api_id", "")
     default_api_hash = st.secrets["telegram"].get("api_hash", "")
     default_phone = st.secrets["telegram"].get("phone", "")
-
-    # Step 1: Create Streamlit input fields for user credentials
-    st.title("Telegram Authentication")
-    st.write("Enter your Telegram API credentials to authenticate.")
 
     # Prompt user to input their credentials, with defaults pre-filled
     api_id = st.text_input("API ID", value=default_api_id)

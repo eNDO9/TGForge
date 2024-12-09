@@ -33,7 +33,7 @@ if st.session_state.auth_step == 1:
     st.title("Telegram API Authentication - Step 1")
     st.write("Please enter your Telegram API credentials.")
     
-    api_id = st.text_input("API ID", type="number")
+    api_id = st.number_input("API ID", min_value=0, step=1)
     api_hash = st.text_input("API Hash")
     phone_number = st.text_input("Phone Number (e.g., +123456789)", type="default")
     

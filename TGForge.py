@@ -11,19 +11,19 @@ nest_asyncio.apply()
 # Define session file path
 session_path = "my_telegram_session"
 
-# Set up a global event loop at the start
-if "loop" not in st.session_state:
-    st.session_state.loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(st.session_state.loop)
+# Function to clean up session file
+def delete_session_file():
+    session_file = f"{session_path}.session"
+    if os.path.exists(session_file):
+        os.remove(session_file)
+        st.write("Session file deleted.")
 
-# Function to create and cache the Telegram client
-@st.cache_resource
+# Create a new Telegram client
 def create_client(api_id, api_hash):
     client = TelegramClient(session_path, api_id, api_hash)
-    st.session_state.loop.run_until_complete(client.connect())
     return client
 
-# Handle authentication flow
+# Step 1: Enter API credentials
 if "auth_step" not in st.session_state:
     st.session_state.auth_step = 1  # Step 1: Enter credentials
 
@@ -31,7 +31,6 @@ if st.session_state.auth_step == 1:
     st.title("Telegram API Authentication - Step 1")
     st.write("Enter your Telegram API credentials.")
 
-    # Input fields for API credentials
     api_id = st.text_input("API ID")
     api_hash = st.text_input("API Hash")
     phone_number = st.text_input("Phone Number (e.g., +123456789)")
@@ -39,12 +38,16 @@ if st.session_state.auth_step == 1:
     if st.button("Next"):
         if api_id and api_hash and phone_number:
             try:
-                st.session_state.client = create_client(int(api_id), api_hash)
-                st.session_state.loop.run_until_complete(
-                    st.session_state.client.send_code_request(phone_number)
-                )
+                # Create the client
+                client = create_client(int(api_id), api_hash)
+                st.session_state.client = client  # Store client in session state
+                st.session_state.phone_number = phone_number  # Store phone number
+
+                # Start connection and send code request
+                asyncio.run(client.connect())
+                if not asyncio.run(client.is_user_authorized()):
+                    asyncio.run(client.send_code_request(phone_number))
                 st.session_state.auth_step = 2  # Move to Step 2
-                st.session_state.phone_number = phone_number
             except PhoneNumberInvalidError:
                 st.error("Invalid phone number. Please try again.")
             except Exception as e:
@@ -60,11 +63,8 @@ elif st.session_state.auth_step == 2:
 
     if st.button("Authenticate"):
         try:
-            st.session_state.loop.run_until_complete(
-                st.session_state.client.sign_in(
-                    st.session_state.phone_number, verification_code
-                )
-            )
+            # Sign in with the code
+            asyncio.run(st.session_state.client.sign_in(st.session_state.phone_number, verification_code))
             st.session_state.auth_step = 3  # Move to Step 3
         except PhoneCodeInvalidError:
             st.error("Invalid verification code. Please try again.")
@@ -80,11 +80,12 @@ elif st.session_state.auth_step == 3:
     if st.button("Fetch Channel Info"):
         try:
             async def fetch_channel_info():
-                result = await st.session_state.client(
-                    functions.channels.GetFullChannelRequest(channel=channel_name)
-                )
+                result = await st.session_state.client(functions.channels.GetFullChannelRequest(channel=channel_name))
                 st.write("Channel Info:", result.stringify())
 
-            st.session_state.loop.run_until_complete(fetch_channel_info())
+            asyncio.run(fetch_channel_info())
         except Exception as e:
             st.error(f"Error fetching channel info: {e}")
+
+# Debugging utilities
+st.write("Current State:", st.session_state.auth_step)

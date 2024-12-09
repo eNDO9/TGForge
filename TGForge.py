@@ -6,6 +6,7 @@ from telethon.errors import (
     SessionPasswordNeededError,
 )
 import asyncio
+import next_asyncio
 import os
 
 nest_asyncio.apply()

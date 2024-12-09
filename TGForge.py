@@ -55,12 +55,11 @@ if st.session_state.auth_step == 1:
     if st.button("Next"):
         if api_id and api_hash and phone_number:
             try:
-                loop = get_event_loop()  # Use the same event loop
+                loop = get_event_loop()
                 st.session_state.client = loop.run_until_complete(
                     init_client(int(api_id), api_hash, phone_number)
                 )
-                st.session_state.auth_step = 2
-                st.experimental_rerun()
+                st.session_state.auth_step = 2  # Move to the next step
             except PhoneNumberInvalidError:
                 st.error("Invalid phone number. Please try again.")
             except Exception as e:
@@ -80,8 +79,7 @@ elif st.session_state.auth_step == 2:
             loop.run_until_complete(
                 st.session_state.client.sign_in(st.session_state.phone_number, verification_code)
             )
-            st.session_state.auth_step = 3
-            st.experimental_rerun()
+            st.session_state.auth_step = 3  # Move to the authenticated step
         except PhoneCodeInvalidError:
             st.error("Invalid code. Please try again.")
         except Exception as e:

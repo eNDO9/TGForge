@@ -9,6 +9,7 @@ import asyncio
 import nest_asyncio
 import os
 
+# Allow nested loops
 nest_asyncio.apply()
 
 # Define session file path
@@ -20,12 +21,16 @@ if "auth_step" not in st.session_state:
 if "client" not in st.session_state:
     st.session_state.client = None
 
-# Function to clean up session file
-def delete_session_file():
-    session_file = f"{session_path}.session"
-    if os.path.exists(session_file):
-        os.remove(session_file)
-        st.write("Session file deleted.")
+# Initialize the event loop
+def get_event_loop():
+    try:
+        return asyncio.get_event_loop()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        return loop
+
+loop = get_event_loop()
 
 # Function to initialize the Telegram client
 async def init_client(api_id, api_hash, phone_number):
@@ -35,15 +40,7 @@ async def init_client(api_id, api_hash, phone_number):
         await client.send_code_request(phone_number)
     return client
 
-# Reuse or create a single event loop
-def get_event_loop():
-    try:
-        return asyncio.get_event_loop()
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        return loop
-
+# Handle Step 1: Enter credentials
 if st.session_state.auth_step == 1:
     st.title("Telegram API Authentication - Step 1")
     st.write("Please enter your Telegram API credentials.")
@@ -55,7 +52,6 @@ if st.session_state.auth_step == 1:
     if st.button("Next"):
         if api_id and api_hash and phone_number:
             try:
-                loop = get_event_loop()
                 st.session_state.client = loop.run_until_complete(
                     init_client(int(api_id), api_hash, phone_number)
                 )
@@ -67,6 +63,7 @@ if st.session_state.auth_step == 1:
         else:
             st.error("Please fill out all fields.")
 
+# Handle Step 2: Enter verification code
 elif st.session_state.auth_step == 2:
     st.title("Telegram API Authentication - Step 2")
     st.write("A verification code has been sent to your Telegram app.")
@@ -75,11 +72,10 @@ elif st.session_state.auth_step == 2:
     
     if st.button("Authenticate"):
         try:
-            loop = get_event_loop()
             loop.run_until_complete(
                 st.session_state.client.sign_in(st.session_state.phone_number, verification_code)
             )
-            st.session_state.auth_step = 3  # Move to the authenticated step
+            st.session_state.auth_step = 3  # Move to authenticated step
         except PhoneCodeInvalidError:
             st.error("Invalid code. Please try again.")
         except Exception as e:
@@ -98,9 +94,6 @@ elif st.session_state.auth_step == 3:
                 result = await st.session_state.client(functions.channels.GetFullChannelRequest(channel=channel_name))
                 st.write("Channel Info:", result.stringify())
             
-            asyncio.run(get_channel_info())
+            loop.run_until_complete(get_channel_info())
         except Exception as e:
             st.error(f"Error fetching channel info: {e}")
-
-# Debugging utilities
-st.write("Current State:", st.session_state.auth_step)

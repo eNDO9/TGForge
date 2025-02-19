@@ -232,7 +232,7 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
             # ✅ Now using correctly defined `channel_list`
             if export_option in ["Save as Excel", "Print & Save as Excel"]:
                 df = pd.DataFrame(channel_data)
-                filename = f"{channel_list[0]}.xlsx" if len(channel_list) == 1 else "multiple_channels_info.xlsx"
+                filename = f"{channel_list[0]}_info.xlsx" if len(channel_list) == 1 else "multiple_channels_info.xlsx"
     
                 # ✅ Save to a BytesIO buffer instead of a file
                 output = io.BytesIO()

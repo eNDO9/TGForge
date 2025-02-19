@@ -5,6 +5,7 @@ import asyncio
 import os
 import pandas as pd
 import nest_asyncio
+import io
 
 # Allow nested async loops in Streamlit
 nest_asyncio.apply()

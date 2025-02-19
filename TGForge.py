@@ -50,7 +50,7 @@ async def get_channel_info(client, channel_name):
         channel = await client.get_entity(channel_name)
         result = await client(functions.channels.GetFullChannelRequest(channel=channel))
 
-        first_message_date = await get_first_valid_message_date(channel_name)
+        first_message_date = await get_first_valid_message_date(client, channel)
         chat = result.chats[0]
 
         title = chat.title

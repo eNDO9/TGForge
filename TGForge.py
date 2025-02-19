@@ -122,44 +122,44 @@ if st.session_state.auth_step == 1:
     col1, col2 = st.columns([2, 1])
 
     with col1:
-    if st.button("Fetch Channel Info"):
-        st.write("Fetching channel info...")  # Debugging Step 1
-
-        async def fetch_info():
-            channel_list = [channel.strip() for channel in channel_input.split(",") if channel.strip()]
-            results = []
-
-            for channel in channel_list:
-                st.write(f"**Processing channel: {channel}**")  # Debugging Step 2
-                try:
-                    channel_info = await get_channel_info(st.session_state.client, channel)
-                    results.append(channel_info)
-                except Exception as e:
-                    st.error(f"Failed to fetch info for {channel}: {e}")
-
-            return results, channel_list  # ✅ Now returning `channel_list`
-
-        channel_data, channel_list = st.session_state.event_loop.run_until_complete(fetch_info())
-
-        if not channel_data:
-            st.error("No channel data retrieved. Check if channels exist.")
-
-        # --- Display Results ---
-        for info in channel_data:
-            if "Error" in info:
-                st.error(info["Error"])
-            else:
-                st.markdown("### 📌 Channel Information")
-                for key, value in info.items():
-                    st.write(f"**{key}:** {value}")
-                st.markdown("---")  # Separator
-
-        # ✅ Now using correctly defined `channel_list`
-        if export_option in ["Save as Excel", "Print & Save as Excel"]:
-            df = pd.DataFrame(channel_data)
-            filename = f"{channel_list[0]}.xlsx" if len(channel_list) == 1 else "multiple_channels_info.xlsx"
-            df.to_excel(filename, index=False)
-            st.success(f"Channel info saved as '{filename}'")
+        if st.button("Fetch Channel Info"):
+            st.write("Fetching channel info...")  # Debugging Step 1
+    
+            async def fetch_info():
+                channel_list = [channel.strip() for channel in channel_input.split(",") if channel.strip()]
+                results = []
+    
+                for channel in channel_list:
+                    st.write(f"**Processing channel: {channel}**")  # Debugging Step 2
+                    try:
+                        channel_info = await get_channel_info(st.session_state.client, channel)
+                        results.append(channel_info)
+                    except Exception as e:
+                        st.error(f"Failed to fetch info for {channel}: {e}")
+    
+                return results, channel_list  # ✅ Now returning `channel_list`
+    
+            channel_data, channel_list = st.session_state.event_loop.run_until_complete(fetch_info())
+    
+            if not channel_data:
+                st.error("No channel data retrieved. Check if channels exist.")
+    
+            # --- Display Results ---
+            for info in channel_data:
+                if "Error" in info:
+                    st.error(info["Error"])
+                else:
+                    st.markdown("### 📌 Channel Information")
+                    for key, value in info.items():
+                        st.write(f"**{key}:** {value}")
+                    st.markdown("---")  # Separator
+    
+            # ✅ Now using correctly defined `channel_list`
+            if export_option in ["Save as Excel", "Print & Save as Excel"]:
+                df = pd.DataFrame(channel_data)
+                filename = f"{channel_list[0]}.xlsx" if len(channel_list) == 1 else "multiple_channels_info.xlsx"
+                df.to_excel(filename, index=False)
+                st.success(f"Channel info saved as '{filename}'")
 
     with col2:
         if st.button("Reset Session"):

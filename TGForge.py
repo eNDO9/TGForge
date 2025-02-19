@@ -137,10 +137,12 @@ if st.session_state.auth_step == 1:
                     except Exception as e:
                         st.error(f"Failed to fetch info for {channel}: {e}")
     
-                return results, channel_list  # ✅ Now returning `channel_list`
+                return results, channel_list  # ✅ Now returning channel_list
     
+            # ✅ Fix: Unpack both `channel_data` and `channel_list`
             channel_data, channel_list = st.session_state.event_loop.run_until_complete(fetch_info())
     
+            # Ensure something is printed if data is empty
             if not channel_data:
                 st.error("No channel data retrieved. Check if channels exist.")
     
@@ -160,6 +162,13 @@ if st.session_state.auth_step == 1:
                 filename = f"{channel_list[0]}.xlsx" if len(channel_list) == 1 else "multiple_channels_info.xlsx"
                 df.to_excel(filename, index=False)
                 st.success(f"Channel info saved as '{filename}'")
+    
+            if export_option in ["Print Only", "Print & Save as Excel"]:
+                for info in channel_data:
+                    print("\nProcessing channel:")
+                    for key, value in info.items():
+                        print(f"{key}: {value}")
+                    print("=" * 60)
 
     with col2:
         if st.button("Reset Session"):

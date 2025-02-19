@@ -122,53 +122,28 @@ if st.session_state.auth_step == 1:
     col1, col2 = st.columns([2, 1])
 
     with col1:
-        if st.button("Fetch Channel Info"):
-            st.write("Fetching channel info...")  # Debugging Step 1
-    
-            async def fetch_info():
-                channel_list = [channel.strip() for channel in channel_input.split(",") if channel.strip()]
-                results = []
-    
-                for channel in channel_list:
-                    st.write(f"**Processing channel: {channel}**")  # Debugging Step 2
-                    try:
-                        channel_info = await get_channel_info(st.session_state.client, channel)
-                        results.append(channel_info)
-                    except Exception as e:
-                        st.error(f"Failed to fetch info for {channel}: {e}")
-    
-                return results, channel_list  # ✅ Now returning channel_list
-    
-            # ✅ Fix: Unpack both `channel_data` and `channel_list`
-            channel_data, channel_list = st.session_state.event_loop.run_until_complete(fetch_info())
-    
-            # Ensure something is printed if data is empty
-            if not channel_data:
-                st.error("No channel data retrieved. Check if channels exist.")
-    
-            # --- Display Results ---
-            for info in channel_data:
-                if "Error" in info:
-                    st.error(info["Error"])
-                else:
-                    st.markdown("### 📌 Channel Information")
-                    for key, value in info.items():
-                        st.write(f"**{key}:** {value}")
-                    st.markdown("---")  # Separator
-    
-            # ✅ Now using correctly defined `channel_list`
-            if export_option in ["Save as Excel", "Print & Save as Excel"]:
-                df = pd.DataFrame(channel_data)
-                filename = f"{channel_list[0]}.xlsx" if len(channel_list) == 1 else "multiple_channels_info.xlsx"
-                df.to_excel(filename, index=False)
-                st.success(f"Channel info saved as '{filename}'")
-    
-            if export_option in ["Print Only", "Print & Save as Excel"]:
-                for info in channel_data:
-                    print("\nProcessing channel:")
-                    for key, value in info.items():
-                        print(f"{key}: {value}")
-                    print("=" * 60)
+        if st.button("Next"):
+            if api_id and api_hash and phone_number:
+                try:
+                    st.session_state.api_id = api_id
+                    st.session_state.api_hash = api_hash
+                    st.session_state.phone_number = phone_number
+
+                    if st.session_state.client is None:
+                        st.session_state.client = create_client(int(api_id), api_hash)
+
+                    async def connect_and_send_code():
+                        await st.session_state.client.connect()
+                        if not await st.session_state.client.is_user_authorized():
+                            await st.session_state.client.send_code_request(phone_number)
+
+                    st.session_state.event_loop.run_until_complete(connect_and_send_code())
+                    st.session_state.auth_step = 2  
+
+                except PhoneNumberInvalidError:
+                    st.error("Invalid phone number. Please check and try again.")
+                except Exception as e:
+                    st.error(f"Error: {e}")
 
     with col2:
         if st.button("Reset Session"):

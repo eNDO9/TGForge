@@ -97,7 +97,7 @@ async def get_channel_info(client, channel_name):
             "Verified": verified
         }
 
-        return chat_info
+        return channel_info
 
     except Exception as e:
         return {"Error": f"Could not fetch info for {channel_name}: {e}"}

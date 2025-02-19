@@ -85,7 +85,7 @@ async def get_channel_info(client, channel_name):
             "Title": title,
             "Description": description,
             "Number of Participants": participants_count,
-            "First Available Post Date": first_message_date,
+            "Channel Creation Date": first_message_date,
             "Primary Username": f"@{primary_username}",
             "Backup Usernames": backup_usernames,
             "URL": url,
@@ -222,7 +222,7 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
                 if "Error" in info:
                     st.error(info["Error"])
                 else:
-                    st.markdown("### 📌 Channel Information")
+                    st.markdown("### Channel Information")
                     for key, value in info.items():
                         st.write(f"**{key}:** {value}")
                     st.markdown("---")  # Separator

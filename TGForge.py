@@ -232,15 +232,20 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
             if export_option in ["Save as Excel", "Print & Save as Excel"]:
                 df = pd.DataFrame(channel_data)
                 filename = f"{channel_list[0]}.xlsx" if len(channel_list) == 1 else "multiple_channels_info.xlsx"
-                df.to_excel(filename, index=False)
-                st.success(f"Channel info saved as '{filename}'")
     
-            if export_option in ["Print Only", "Print & Save as Excel"]:
-                for info in channel_data:
-                    print("\nProcessing channel:")
-                    for key, value in info.items():
-                        print(f"{key}: {value}")
-                    print("=" * 60)
+                # ✅ Save to a BytesIO buffer instead of a file
+                output = io.BytesIO()
+                with pd.ExcelWriter(output, engine="openpyxl") as writer:
+                    df.to_excel(writer, index=False)
+                output.seek(0)  # Reset pointer to start
+    
+                # ✅ Show download button
+                st.download_button(
+                    label="📥 Download Excel File",
+                    data=output,
+                    file_name=filename,
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                )
 
     with col2:
         if st.button("Logout"):

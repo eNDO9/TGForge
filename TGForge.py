@@ -11,7 +11,7 @@ nest_asyncio.apply()
 # Define session file path
 SESSION_PATH = "my_telegram_session"
 
-# Function to delete session file and logout user
+# Function to delete session file and log out user
 def delete_session_file():
     session_file = f"{SESSION_PATH}.session"
     if os.path.exists(session_file):
@@ -41,13 +41,15 @@ st.title("Telegram API Authentication")
 # Step 1: Check if the user is already authenticated
 if st.session_state.auth_step == 1:
     try:
-        client = create_client(st.session_state.get("api_id", ""), st.session_state.get("api_hash", ""))
         if st.session_state.client is None:
-            st.session_state.client = client
+            if "api_id" in st.session_state and "api_hash" in st.session_state:
+                st.session_state.client = create_client(st.session_state.api_id, st.session_state.api_hash)
 
         async def connect_and_check_auth():
-            await st.session_state.client.connect()
-            return await st.session_state.client.is_user_authorized()
+            if st.session_state.client:
+                await st.session_state.client.connect()
+                return await st.session_state.client.is_user_authorized()
+            return False
 
         # Run inside single event loop
         is_authorized = st.session_state.event_loop.run_until_complete(connect_and_check_auth())
@@ -75,11 +77,15 @@ if not st.session_state.authenticated and st.session_state.auth_step == 1:
                 st.session_state.api_hash = api_hash
                 st.session_state.phone_number = phone_number
 
+                # Ensure client is created
+                if st.session_state.client is None:
+                    st.session_state.client = create_client(int(api_id), api_hash)
+
                 async def connect_and_send_code():
                     await st.session_state.client.connect()
                     if not await st.session_state.client.is_user_authorized():
                         await st.session_state.client.send_code_request(phone_number)
-
+                
                 # Run inside single event loop
                 st.session_state.event_loop.run_until_complete(connect_and_send_code())
 

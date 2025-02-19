@@ -10,12 +10,28 @@ nest_asyncio.apply()
 
 # Define session file path
 SESSION_PATH = "my_telegram_session"
+AUTH_STATUS_FILE = "auth_status.txt"  # File to persist authentication status
+
+# Function to check if the user was previously authenticated
+def was_authenticated():
+    return os.path.exists(AUTH_STATUS_FILE)
+
+# Function to mark the user as authenticated
+def mark_authenticated():
+    with open(AUTH_STATUS_FILE, "w") as f:
+        f.write("authenticated")
+
+# Function to remove authentication status
+def remove_authentication_status():
+    if os.path.exists(AUTH_STATUS_FILE):
+        os.remove(AUTH_STATUS_FILE)
 
 # Function to delete session file and log out user
 def delete_session_file():
     session_file = f"{SESSION_PATH}.session"
     if os.path.exists(session_file):
         os.remove(session_file)
+    remove_authentication_status()
     st.session_state.authenticated = False
     st.session_state.client = None
     st.session_state.auth_step = 1  # Reset authentication step
@@ -33,13 +49,13 @@ if "event_loop" not in st.session_state:
 # Initialize session state variables
 if "auth_step" not in st.session_state:
     st.session_state.auth_step = 1
-    st.session_state.authenticated = False
+    st.session_state.authenticated = was_authenticated()  # Restore previous authentication
     st.session_state.client = None
 
 st.title("Telegram API Authentication")
 
 # Step 1: Check if the user is already authenticated
-if st.session_state.auth_step == 1:
+if st.session_state.authenticated:
     try:
         if st.session_state.client is None:
             if "api_id" in st.session_state and "api_hash" in st.session_state:
@@ -55,10 +71,12 @@ if st.session_state.auth_step == 1:
         is_authorized = st.session_state.event_loop.run_until_complete(connect_and_check_auth())
 
         if is_authorized:
-            st.session_state.authenticated = True
             st.session_state.auth_step = 3  # Skip to authenticated step
             st.success("You are already authenticated!")
-
+        else:
+            st.session_state.authenticated = False  # Reset if session expired
+            remove_authentication_status()
+    
     except Exception as e:
         st.warning(f"Session check failed: {e}")
 
@@ -112,6 +130,7 @@ elif st.session_state.auth_step == 2:
 
             st.session_state.auth_step = 3  # Move to success step
             st.session_state.authenticated = True
+            mark_authenticated()  # Persist authentication status
             st.success("Authentication successful!")
         
         except PhoneCodeInvalidError:

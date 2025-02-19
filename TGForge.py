@@ -178,4 +178,69 @@ elif st.session_state.auth_step == 2:
         if st.button("Reset Session"):
             delete_session_file()
 
-# --- Step 
+# --- Step 3: Fetch Channel Info ---
+elif st.session_state.auth_step == 3 and st.session_state.authenticated:
+    st.subheader("Authenticated!")
+    
+    # Ensure UI Loads Properly
+    st.write("Enter Telegram channel usernames below and click Fetch Channel Info.")
+
+    # User Input
+    channel_input = st.text_area("Enter Telegram channel usernames (comma-separated):", "unity_of_fields")
+
+    # Export Options
+    export_option = st.radio("Export Options:", ["Print Only", "Save as Excel", "Print & Save as Excel"])
+
+    col1, col2 = st.columns([2, 1])
+
+    with col1:
+        if st.button("Fetch Channel Info"):
+            st.write("Fetching channel info...")  # Debugging Step 1
+
+            async def fetch_info():
+                channel_list = [channel.strip() for channel in channel_input.split(",") if channel.strip()]
+                results = []
+
+                for channel in channel_list:
+                    st.write(f"**Processing channel: {channel}**")  # Debugging Step 2
+                    try:
+                        channel_info = await get_channel_info(st.session_state.client, channel)
+                        results.append(channel_info)
+                    except Exception as e:
+                        st.error(f"Failed to fetch info for {channel}: {e}")
+
+                return results
+
+            channel_data = st.session_state.event_loop.run_until_complete(fetch_info())
+
+            # Ensure something is printed if data is empty
+            if not channel_data:
+                st.error("No channel data retrieved. Check if channels exist.")
+
+            # --- Display Results ---
+            for info in channel_data:
+                if "Error" in info:
+                    st.error(info["Error"])
+                else:
+                    st.markdown("### 📌 Channel Information")
+                    for key, value in info.items():
+                        st.write(f"**{key}:** {value}")
+                    st.markdown("---")  # Separator
+
+            # --- Export to Excel ---
+            if export_option in ["Save as Excel", "Print & Save as Excel"]:
+                df = pd.DataFrame(channel_data)
+                filename = f"{channel_list[0]}.xlsx" if len(channel_list) == 1 else "multiple_channels_info.xlsx"
+                df.to_excel(filename, index=False)
+                st.success(f"Channel info saved as '{filename}'")
+
+            if export_option in ["Print Only", "Print & Save as Excel"]:
+                for info in channel_data:
+                    print("\nProcessing channel:")
+                    for key, value in info.items():
+                        print(f"{key}: {value}")
+                    print("=" * 60)
+
+    with col2:
+        if st.button("Logout"):
+            delete_session_file()

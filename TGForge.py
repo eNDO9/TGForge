@@ -106,6 +106,12 @@ async def get_channel_info(client, channel_name):
 st.title("Telegram API Authentication")
 
 # --- Step 1: Ask for API Credentials ---
+# Ensure session state variables are initialized
+if "auth_step" not in st.session_state:
+    st.session_state.auth_step = 1
+    st.session_state.authenticated = False
+    st.session_state.client = None
+    
 if st.session_state.auth_step == 1:
     st.subheader("Step 1: Enter Telegram API Credentials")
     

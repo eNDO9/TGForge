@@ -4,4 +4,4 @@ pandas
 nest_asyncio
 streamlit
 python-docx
-ExcelWriter
+openpyxl

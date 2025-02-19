@@ -5,3 +5,4 @@ nest_asyncio
 streamlit
 python-docx
 openpyxl
+io

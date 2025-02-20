@@ -49,7 +49,7 @@ elif st.session_state.auth_step == 2:
 elif st.session_state.auth_step == 3 and st.session_state.authenticated:
     st.subheader("Fetch Telegram Channel Info")
 
-    channel_input = st.text_area("Enter Telegram channel usernames (comma-separated):", "unity_of_fields")
+    channel_input = st.text_area("Enter Telegram channel usernames (comma-separated):", "")
 
     if st.button("Fetch Channel Info"):
         async def fetch_info():

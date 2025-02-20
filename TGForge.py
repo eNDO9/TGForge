@@ -193,49 +193,55 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
 
     with col1:
         if st.button("Fetch Channel Info"):
-            st.write("Fetching channel info...")  # Debugging Step 1
-
+            st.write("Fetching channel info...")  
+    
             async def fetch_info():
                 channel_list = [channel.strip() for channel in channel_input.split(",") if channel.strip()]
                 results = []
-
+    
                 for channel in channel_list:
-                    st.write(f"**Processing channel: {channel}**")  # Debugging Step 2
+                    st.write(f"**Processing channel: {channel}**")
                     try:
                         channel_info = await get_channel_info(st.session_state.client, channel)
                         results.append(channel_info)
                     except Exception as e:
                         st.error(f"Failed to fetch info for {channel}: {e}")
-
-                return results, channel_list  # ✅ Now returning channel_list
-
-            if "channel_data" in st.session_state and "channel_list" in st.session_state:
-                channel_data = st.session_state.channel_data
-                channel_list = st.session_state.channel_list
-            
-                # --- Re-Display Results ---
-                for info in channel_data:
-                    if "Error" in info:
-                        st.error(info["Error"])
-                    else:
-                        st.markdown("### 📌 Channel Information")
-                        for key, value in info.items():
-                            st.write(f"**{key}:** {value}")
-                        st.markdown("---")  # Separator
-            
-                # ✅ Save to a BytesIO buffer instead of a file
-                df = pd.DataFrame(channel_data)
-                filename = f"{channel_list[0]}_info.xlsx" if len(channel_list) == 1 else "multiple_channels_info.xlsx"
-            
-                output = io.BytesIO()
-                with pd.ExcelWriter(output, engine="openpyxl") as writer:
-                    df.to_excel(writer, index=False)
-                output.seek(0)
-            
-                # ✅ Show download button without clearing the screen
-                st.download_button(
-                    label="📥 Download Excel File",
-                    data=output,
-                    file_name=filename,
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                )
+    
+                return results, channel_list
+    
+            # ✅ Store data in session state so it persists after download
+            st.session_state.channel_data, st.session_state.channel_list = st.session_state.event_loop.run_until_complete(fetch_info())
+            st.session_state.download_ready = True  # ✅ Marks that the data is ready to be downloaded
+            st.experimental_rerun()  # ✅ Forces UI to refresh without clearing session state
+    
+    # --- Preserve Displayed Data After Download ---
+    if st.session_state.download_ready and st.session_state.channel_data:
+        channel_data = st.session_state.channel_data
+        channel_list = st.session_state.channel_list
+    
+        # --- Display Results ---
+        for info in channel_data:
+            if "Error" in info:
+                st.error(info["Error"])
+            else:
+                st.markdown("### 📌 Channel Information")
+                for key, value in info.items():
+                    st.write(f"**{key}:** {value}")
+                st.markdown("---")  # Separator
+    
+        # ✅ Save to a BytesIO buffer instead of a file
+        df = pd.DataFrame(channel_data)
+        filename = f"{channel_list[0]}.xlsx" if len(channel_list) == 1 else "multiple_channels_info.xlsx"
+    
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine="openpyxl") as writer:
+            df.to_excel(writer, index=False)
+        output.seek(0)
+    
+        # ✅ Show download button without clearing the screen
+        st.download_button(
+            label="📥 Download Excel File",
+            data=output,
+            file_name=filename,
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )

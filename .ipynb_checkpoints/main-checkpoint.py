@@ -86,3 +86,25 @@ elif st.session_state.auth_step == 2:
     with col2:
         if st.button("Reset Session"):
             delete_session_file()
+
+# --- Step 3: Fetch Channel Info UI (Calls External Function) ---
+elif st.session_state.auth_step == 3 and st.session_state.authenticated:
+    st.subheader("Fetch Telegram Channel Info")
+
+    # User Input
+    channel_input = st.text_area("Enter Telegram channel usernames (comma-separated):", "unity_of_fields")
+
+    if st.button("Fetch Channel Info"):
+        # Call fetch_channel_data from fetch_channel.py
+        st.session_state.channel_data = asyncio.run(fetch_channel_data(st.session_state.client, channel_input.split(",")))
+
+    # Display the results if available
+    if "channel_data" in st.session_state and st.session_state.channel_data:
+        for info in st.session_state.channel_data:
+            if "Error" in info:
+                st.error(info["Error"])
+            else:
+                st.markdown("### 📌 Channel Information")
+                for key, value in info.items():
+                    st.write(f"**{key}:** {value}")
+                st.markdown("---")

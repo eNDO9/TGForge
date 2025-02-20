@@ -7,7 +7,7 @@ from fetch_channel import get_channel_info
 from telethon.errors import PhoneNumberInvalidError, PhoneCodeInvalidError, SessionPasswordNeededError
 
 # --- Streamlit UI ---
-st.title("TGForge")
+st.title("Telegram API Authentication")
 
 # Ensure session state variables are initialized
 if "auth_step" not in st.session_state:

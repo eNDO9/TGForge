@@ -7,7 +7,7 @@ from fetch_channel import get_channel_info
 from telethon.errors import PhoneNumberInvalidError, PhoneCodeInvalidError, SessionPasswordNeededError
 
 # --- Streamlit UI ---
-st.title("TGForge")
+st.title("Telegram API Authentication")
 
 # Ensure session state variables are initialized
 if "auth_step" not in st.session_state:
@@ -65,14 +65,10 @@ elif st.session_state.auth_step == 2:
                 async def sign_in():
                     await st.session_state.client.sign_in(st.session_state.phone_number, verification_code)
 
-<<<<<<< HEAD
                 st.session_state.event_loop.run_until_complete(sign_in())
                 st.session_state.auth_step = 3  
                 st.session_state.authenticated = True
                 st.success("Authentication successful!")
-=======
-    channel_input = st.text_area("Enter Telegram channel usernames (comma-separated):", "")
->>>>>>> 5d46fef247b946ddce550d5f4ce261605dd452b1
 
             except PhoneCodeInvalidError:
                 st.error("Invalid verification code. Please try again.")
@@ -81,28 +77,6 @@ elif st.session_state.auth_step == 2:
             except Exception as e:
                 st.error(f"Error: {e}")
 
-<<<<<<< HEAD
     with col2:
         if st.button("Reset Session"):
             delete_session_file()
-=======
-        try:
-            channel_data = st.session_state.event_loop.run_until_complete(fetch_info())
-            st.session_state.channel_data = channel_data
-        except Exception as e:
-            st.error(f"Error while fetching channel data: {e}")
-
-    if "channel_data" in st.session_state and st.session_state.channel_data:
-        df = pd.DataFrame(st.session_state.channel_data)
-        output = io.BytesIO()
-        with pd.ExcelWriter(output, engine="openpyxl") as writer:
-            df.to_excel(writer, index=False)
-        output.seek(0)
-
-        st.download_button(
-            label="📥 Download Excel File",
-            data=output,
-            file_name="channel_info.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        )
->>>>>>> 5d46fef247b946ddce550d5f4ce261605dd452b1

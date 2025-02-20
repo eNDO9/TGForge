@@ -1,254 +1,81 @@
 import streamlit as st
-from telethon import TelegramClient, functions
-from telethon.errors import PhoneNumberInvalidError, PhoneCodeInvalidError, SessionPasswordNeededError
 import asyncio
-import os
 import pandas as pd
-import nest_asyncio
 import io
-
-# Allow nested async loops in Streamlit
-nest_asyncio.apply()
-
-# Define session file path
-SESSION_PATH = "my_telegram_session"
-
-# Function to delete session file and log out user
-def delete_session_file():
-    session_file = f"{SESSION_PATH}.session"
-    if os.path.exists(session_file):
-        os.remove(session_file)
-    st.session_state.authenticated = False
-    st.session_state.client = None
-    st.session_state.auth_step = 1  # Reset authentication step
-    st.success("Session reset successfully. Start again.")
-
-# Function to create a Telegram client
-def create_client(api_id, api_hash):
-    return TelegramClient(SESSION_PATH, api_id, api_hash)
-
-# Ensure a single event loop exists
-if "event_loop" not in st.session_state:
-    st.session_state.event_loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(st.session_state.event_loop)
-
-# --- Function to Get First Available User-Generated Message ---
-async def get_first_valid_message_date(client, channel):
-    """Finds the date of the earliest available user-generated message in a channel."""
-    try:
-        async for message in client.iter_messages(channel, reverse=True):
-            if message and not message.action:
-                if message.text or message.media:
-                    return message.date.isoformat()
-        return "No user-generated messages found"
-    except Exception as e:
-        return f"Error fetching first message: {e}"
-
-# --- Function to Fetch Channel Info ---
-async def get_channel_info(client, channel_name):
-    """Fetches and formats information about a Telegram channel."""
-    try:
-        channel = await client.get_entity(channel_name)
-        result = await client(functions.channels.GetFullChannelRequest(channel=channel))
-
-        first_message_date = await get_first_valid_message_date(client, channel)
-        chat = result.chats[0]
-
-        title = chat.title
-        description = result.full_chat.about.strip() if result.full_chat.about else 'No Description'
-        participants_count = result.full_chat.participants_count if hasattr(result.full_chat, 'participants_count') else 'Not Available'
-
-        try:
-            if chat.username:
-                primary_username = chat.username
-                backup_usernames = 'None'
-            elif chat.usernames:
-                active_usernames = [u.username for u in chat.usernames if u.active]
-                primary_username = active_usernames[0] if active_usernames else 'No Username'
-                backup_usernames = ', '.join(active_usernames[1:]) if len(active_usernames) > 1 else 'None'
-            else:
-                primary_username = 'No Username'
-                backup_usernames = 'None'
-        except Exception as e:
-            print(f"Error processing usernames for {channel_name}: {e}")
-            primary_username = 'No Username'
-            backup_usernames = 'None'
-        
-        url = f"https://t.me/{primary_username}" if primary_username != 'No Username' else "No public URL available"
-        chat_type = 'Channel' if chat.broadcast else 'Group'
-        chat_id = chat.id
-        access_hash = chat.access_hash
-        restricted = 'Yes' if chat.restricted else 'No'
-        scam = 'Yes' if chat.scam else 'No'
-        verified = 'Yes' if chat.verified else 'No'
-
-        channel_info = {
-            "Title": title,
-            "Description": description,
-            "Number of Participants": participants_count,
-            "Channel Creation Date": first_message_date,
-            "Primary Username": f"@{primary_username}",
-            "Backup Usernames": backup_usernames,
-            "URL": url,
-            "Chat Type": chat_type,
-            "Chat ID": chat_id,
-            "Access Hash": access_hash,
-            "Restricted": restricted,
-            "Scam": scam,
-            "Verified": verified
-        }
-
-        return channel_info
-
-    except Exception as e:
-        return {"Error": f"Could not fetch info for {channel_name}: {e}"}
+from telegram_client import TelegramSession
+from fetch_channel import get_channel_info
 
 # --- Streamlit UI ---
 st.title("Telegram API Authentication")
 
-# --- Step 1: Ask for API Credentials ---
 # Ensure session state variables are initialized
 if "auth_step" not in st.session_state:
     st.session_state.auth_step = 1
     st.session_state.authenticated = False
     st.session_state.client = None
-    
+    st.session_state.event_loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(st.session_state.event_loop)
+
 if st.session_state.auth_step == 1:
     st.subheader("Step 1: Enter Telegram API Credentials")
     
-    api_id = st.text_input("API ID", value=st.session_state.get("api_id", ""))
-    api_hash = st.text_input("API Hash", value=st.session_state.get("api_hash", ""))
+    api_id = st.text_input("API ID")
+    api_hash = st.text_input("API Hash")
     phone_number = st.text_input("Phone Number (e.g., +123456789)")
 
-    col1, col2 = st.columns([2, 1])
+    if st.button("Next"):
+        if api_id and api_hash and phone_number:
+            try:
+                st.session_state.client = TelegramSession(int(api_id), api_hash)
+                asyncio.run(st.session_state.client.connect())
+                asyncio.run(st.session_state.client.send_code(phone_number))
+                st.session_state.auth_step = 2  
+            except Exception as e:
+                st.error(f"Error: {e}")
 
-    with col1:
-        if st.button("Next"):
-            if api_id and api_hash and phone_number:
-                try:
-                    st.session_state.api_id = api_id
-                    st.session_state.api_hash = api_hash
-                    st.session_state.phone_number = phone_number
-
-                    if st.session_state.client is None:
-                        st.session_state.client = create_client(int(api_id), api_hash)
-
-                    async def connect_and_send_code():
-                        await st.session_state.client.connect()
-                        if not await st.session_state.client.is_user_authorized():
-                            await st.session_state.client.send_code_request(phone_number)
-
-                    st.session_state.event_loop.run_until_complete(connect_and_send_code())
-                    st.session_state.auth_step = 2  
-
-                except PhoneNumberInvalidError:
-                    st.error("Invalid phone number. Please check and try again.")
-                except Exception as e:
-                    st.error(f"Error: {e}")
-
-    with col2:
-        if st.button("Reset Session"):
-            delete_session_file()
-
-# --- Step 2: Enter Verification Code ---
 elif st.session_state.auth_step == 2:
     st.subheader("Step 2: Enter Verification Code")
     verification_code = st.text_input("Enter the verification code")
 
-    col1, col2 = st.columns([2, 1])
+    if st.button("Authenticate"):
+        try:
+            asyncio.run(st.session_state.client.sign_in(st.session_state.phone_number, verification_code))
+            st.session_state.auth_step = 3  
+            st.session_state.authenticated = True
+            st.success("Authentication successful!")
+        except Exception as e:
+            st.error(f"Error: {e}")
 
-    with col1:
-        if st.button("Authenticate"):
-            try:
-                async def sign_in():
-                    await st.session_state.client.sign_in(st.session_state.phone_number, verification_code)
-
-                st.session_state.event_loop.run_until_complete(sign_in())
-                st.session_state.auth_step = 3  
-                st.session_state.authenticated = True
-                st.success("Authentication successful!")
-
-            except PhoneCodeInvalidError:
-                st.error("Invalid verification code. Please try again.")
-            except SessionPasswordNeededError:
-                st.error("Two-step verification is enabled. This script does not handle passwords.")
-            except Exception as e:
-                st.error(f"Error: {e}")
-
-    with col2:
-        if st.button("Reset Session"):
-            delete_session_file()
-
-# --- Step 3: Fetch Channel Info ---
 elif st.session_state.auth_step == 3 and st.session_state.authenticated:
-    st.subheader("Authenticated!")
-    
-    # Ensure UI Loads Properly
-    st.write("Enter Telegram channel usernames below and click Fetch Channel Info.")
+    st.subheader("Fetch Telegram Channel Info")
 
-    # User Input
     channel_input = st.text_area("Enter Telegram channel usernames (comma-separated):", "unity_of_fields")
 
-    col1, col2 = st.columns([2, 1])
+    if st.button("Fetch Channel Info"):
+        async def fetch_info():
+            channel_list = [channel.strip() for channel in channel_input.split(",") if channel.strip()]
+            results = []
+            for channel in channel_list:
+                channel_info = await get_channel_info(st.session_state.client.client, channel)
+                results.append(channel_info)
+            return results
 
-    with col1:
-        if st.button("Fetch Channel Info"):
-            st.write("Fetching channel info...")  # Debugging Step 1
+        try:
+            channel_data = st.session_state.event_loop.run_until_complete(fetch_info())
+            st.session_state.channel_data = channel_data
+        except Exception as e:
+            st.error(f"Error while fetching channel data: {e}")
 
-            async def fetch_info():
-                """Asynchronous function to fetch info for multiple Telegram channels."""
-                channel_list = [channel.strip() for channel in channel_input.split(",") if channel.strip()]
-                results = []
-
-                for channel in channel_list:
-                    st.write(f"**Processing channel: {channel}**")  # Debugging Step 2
-                    try:
-                        channel_info = await get_channel_info(st.session_state.client, channel)
-                        results.append(channel_info)
-                    except Exception as e:
-                        st.error(f"Failed to fetch info for {channel}: {e}")
-
-                return results, channel_list
-
-            # Run async function and store results in session state
-            try:
-                channel_data, channel_list = st.session_state.event_loop.run_until_complete(fetch_info())
-                st.session_state.channel_data = channel_data
-                st.session_state.channel_list = channel_list
-            except Exception as e:
-                st.error(f"Error while fetching channel data: {e}")
-
-    # Display the results if available
     if "channel_data" in st.session_state and st.session_state.channel_data:
-        channel_data = st.session_state.channel_data
-        channel_list = st.session_state.channel_list
-
-        # --- Re-Display Results ---
-        for info in channel_data:
-            if "Error" in info:
-                st.error(info["Error"])
-            else:
-                st.markdown("### 📌 Channel Information")
-                for key, value in info.items():
-                    st.write(f"**{key}:** {value}")
-                st.markdown("---")  # Separator
-
-        # ✅ Convert to DataFrame and save in memory
-        df = pd.DataFrame(channel_data)
-        filename = f"{channel_list[0]}_info.xlsx" if len(channel_list) == 1 else "multiple_channels_info.xlsx"
-
+        df = pd.DataFrame(st.session_state.channel_data)
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine="openpyxl") as writer:
             df.to_excel(writer, index=False)
         output.seek(0)
 
-        # ✅ Show download button without clearing the screen
         st.download_button(
             label="📥 Download Excel File",
             data=output,
-            file_name=filename,
+            file_name="channel_info.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
-    else:
-        st.warning("No channel data available. Fetch channel info first.")
-

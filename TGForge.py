@@ -209,39 +209,33 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
 
                 return results, channel_list  # ✅ Now returning channel_list
 
-            if "channel_data" not in st.session_state or "channel_list" not in st.session_state:
-                st.session_state.channel_data, st.session_state.channel_list = st.session_state.event_loop.run_until_complete(fetch_info())
+            if "channel_data" in st.session_state and "channel_list" in st.session_state:
+                channel_data = st.session_state.channel_data
+                channel_list = st.session_state.channel_list
             
-            channel_data = st.session_state.channel_data
-            channel_list = st.session_state.channel_list
-
-            if not channel_data:
-                st.error("No channel data retrieved. Check if channels exist.")
-
-            # --- Display Results ---
-            for info in channel_data:
-                if "Error" in info:
-                    st.error(info["Error"])
-                else:
-                    st.markdown("### 📌 Channel Information")
-                    for key, value in info.items():
-                        st.write(f"**{key}:** {value}")
-                    st.markdown("---")  # Separator
-
-            # ✅ Now using correctly defined `channel_list`
-            df = pd.DataFrame(channel_data)
-            filename = f"{channel_list[0]}.xlsx" if len(channel_list) == 1 else "multiple_channels_info.xlsx"
-
-            # ✅ Save to a BytesIO buffer instead of a file
-            output = io.BytesIO()
-            with pd.ExcelWriter(output, engine="openpyxl") as writer:
-                df.to_excel(writer, index=False)
-            output.seek(0)
-
-            # ✅ Show download button
-            st.download_button(
-                label="📥 Download Excel File",
-                data=output,
-                file_name=filename,
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            )
+                # --- Re-Display Results ---
+                for info in channel_data:
+                    if "Error" in info:
+                        st.error(info["Error"])
+                    else:
+                        st.markdown("### 📌 Channel Information")
+                        for key, value in info.items():
+                            st.write(f"**{key}:** {value}")
+                        st.markdown("---")  # Separator
+            
+                # ✅ Save to a BytesIO buffer instead of a file
+                df = pd.DataFrame(channel_data)
+                filename = f"{channel_list[0]}_info.xlsx" if len(channel_list) == 1 else "multiple_channels_info.xlsx"
+            
+                output = io.BytesIO()
+                with pd.ExcelWriter(output, engine="openpyxl") as writer:
+                    df.to_excel(writer, index=False)
+                output.seek(0)
+            
+                # ✅ Show download button without clearing the screen
+                st.download_button(
+                    label="📥 Download Excel File",
+                    data=output,
+                    file_name=filename,
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                )

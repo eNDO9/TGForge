@@ -6,24 +6,24 @@ from telegram_client import create_client, delete_session_file
 from fetch_channel import fetch_channel_data
 from telethon.errors import PhoneNumberInvalidError, PhoneCodeInvalidError, SessionPasswordNeededError
 
-# --- 🔥 Ensure an Event Loop Exists ---
-try:
-    asyncio.get_running_loop()
-except RuntimeError:
-    asyncio.set_event_loop(asyncio.new_event_loop())
+# --- Ensure an Event Loop Exists ---
+if "event_loop" not in st.session_state:
+    st.session_state.event_loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(st.session_state.event_loop)
 
 # --- Streamlit UI ---
-st.title("TGForge")
+st.title("Telegram API Authentication")
 
 # Ensure session state variables are initialized
 if "auth_step" not in st.session_state:
     st.session_state.auth_step = 1
     st.session_state.authenticated = False
     st.session_state.client = None
-    
+
+# --- Step 1: Enter API Credentials ---
 if st.session_state.auth_step == 1:
     st.subheader("Step 1: Enter Telegram API Credentials")
-    
+
     api_id = st.text_input("API ID", value=st.session_state.get("api_id", ""))
     api_hash = st.text_input("API Hash", value=st.session_state.get("api_hash", ""))
     phone_number = st.text_input("Phone Number (e.g., +123456789)")
@@ -87,7 +87,7 @@ elif st.session_state.auth_step == 2:
         if st.button("Reset Session"):
             delete_session_file()
 
-# --- Step 3: Fetch Channel Info UI (Calls External Function) ---
+# --- Step 3: Fetch Channel Info UI ---
 elif st.session_state.auth_step == 3 and st.session_state.authenticated:
     st.subheader("Fetch Telegram Channel Info")
 
@@ -95,8 +95,10 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
     channel_input = st.text_area("Enter Telegram channel usernames (comma-separated):", "unity_of_fields")
 
     if st.button("Fetch Channel Info"):
-        # Call fetch_channel_data from fetch_channel.py
-        st.session_state.channel_data = asyncio.run(fetch_channel_data(st.session_state.client, channel_input.split(",")))
+        # ✅ Run inside the existing event loop (Fixes the asyncio issue)
+        st.session_state.channel_data = st.session_state.event_loop.run_until_complete(
+            fetch_channel_data(st.session_state.client, channel_input.split(","))
+        )
 
     # Display the results if available
     if "channel_data" in st.session_state and st.session_state.channel_data:

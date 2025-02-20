@@ -1,31 +1,26 @@
-from telethon import TelegramClient, functions
+from telethon import TelegramClient
 import os
+import streamlit as st
+import asyncio
 
-class TelegramSession:
-    def __init__(self, api_id, api_hash, session_name="my_session"):
-        self.client = TelegramClient(session_name, api_id, api_hash)
+# Define session file path
+SESSION_PATH = "my_telegram_session"
 
-    async def connect(self):
-        """Connect to Telegram API"""
-        await self.client.connect()
+# Function to delete session file and log out user
+def delete_session_file():
+    session_file = f"{SESSION_PATH}.session"
+    if os.path.exists(session_file):
+        os.remove(session_file)
+    st.session_state.authenticated = False
+    st.session_state.client = None
+    st.session_state.auth_step = 1  # Reset authentication step
+    st.success("Session reset successfully. Start again.")
 
-    async def send_code(self, phone_number):
-        """Send a login code to the phone number"""
-        try:
-            return await self.client.send_code_request(phone_number)
-        except Exception as e:
-            return f"Error: {e}"
+# Function to create a Telegram client
+def create_client(api_id, api_hash):
+    return TelegramClient(SESSION_PATH, api_id, api_hash)
 
-    async def sign_in(self, phone_number, code):
-        """Sign in with the code received"""
-        try:
-            return await self.client.sign_in(phone_number, code)
-        except Exception as e:
-            return f"Error: {e}"
-
-    async def logout(self):
-        """Log out and reset session"""
-        await self.client.log_out()
-        session_file = f"{self.client.session.filename}.session"
-        if os.path.exists(session_file):
-            os.remove(session_file)
+# Ensure a single event loop exists
+if "event_loop" not in st.session_state:
+    st.session_state.event_loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(st.session_state.event_loop)

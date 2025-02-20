@@ -180,7 +180,7 @@ elif st.session_state.auth_step == 2:
             delete_session_file()
 
 # --- Step 3: Fetch Channel Info ---
-elif st.session_state.auth_step == 3 and st.session_state.authenticated:
+if st.session_state.get("auth_step") == 3 and st.session_state.get("authenticated"):
     st.subheader("Authenticated!")
     
     # Ensure UI Loads Properly
@@ -193,33 +193,33 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
 
     with col1:
         if st.button("Fetch Channel Info"):
-            st.write("Fetching channel info...")  
-    
+            st.write("Fetching channel info...")  # Debugging Step 1
+
             async def fetch_info():
                 channel_list = [channel.strip() for channel in channel_input.split(",") if channel.strip()]
                 results = []
-    
+
                 for channel in channel_list:
-                    st.write(f"**Processing channel: {channel}**")
+                    st.write(f"**Processing channel: {channel}**")  # Debugging Step 2
                     try:
                         channel_info = await get_channel_info(st.session_state.client, channel)
                         results.append(channel_info)
                     except Exception as e:
                         st.error(f"Failed to fetch info for {channel}: {e}")
-    
+
                 return results, channel_list
-    
-            # ✅ Store data in session state so it persists after download
-            st.session_state.channel_data, st.session_state.channel_list = st.session_state.event_loop.run_until_complete(fetch_info())
-            st.session_state.download_ready = True  # ✅ Marks that the data is ready to be downloaded
-            st.experimental_rerun()  # ✅ Forces UI to refresh without clearing session state
-    
-    # --- Preserve Displayed Data After Download ---
-    if st.session_state.download_ready and st.session_state.channel_data:
+
+            # ✅ Store fetched data in session state so it persists
+            st.session_state.channel_data, st.session_state.channel_list = asyncio.run(fetch_info())
+
+            # ✅ Force rerun to ensure UI updates properly
+            st.experimental_rerun()
+
+    # --- Display Results ---
+    if st.session_state.get("channel_data") and st.session_state.get("channel_list"):
         channel_data = st.session_state.channel_data
         channel_list = st.session_state.channel_list
-    
-        # --- Display Results ---
+
         for info in channel_data:
             if "Error" in info:
                 st.error(info["Error"])
@@ -228,16 +228,16 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
                 for key, value in info.items():
                     st.write(f"**{key}:** {value}")
                 st.markdown("---")  # Separator
-    
+
         # ✅ Save to a BytesIO buffer instead of a file
         df = pd.DataFrame(channel_data)
-        filename = f"{channel_list[0]}.xlsx" if len(channel_list) == 1 else "multiple_channels_info.xlsx"
-    
+        filename = f"{channel_list[0]}_info.xlsx" if len(channel_list) == 1 else "multiple_channels_info.xlsx"
+
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine="openpyxl") as writer:
             df.to_excel(writer, index=False)
         output.seek(0)
-    
+
         # ✅ Show download button without clearing the screen
         st.download_button(
             label="📥 Download Excel File",

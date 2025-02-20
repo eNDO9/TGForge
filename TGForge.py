@@ -28,10 +28,9 @@ def create_client(api_id, api_hash):
     return TelegramClient(SESSION_PATH, api_id, api_hash)
 
 # Ensure a single event loop exists
-if "channel_data" not in st.session_state:
-    st.session_state.channel_data = None
-if "channel_list" not in st.session_state:
-    st.session_state.channel_list = None
+if "event_loop" not in st.session_state:
+    st.session_state.event_loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(st.session_state.event_loop)
 
 # --- Function to Get First Available User-Generated Message ---
 async def get_first_valid_message_date(client, channel):

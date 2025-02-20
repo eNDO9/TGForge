@@ -196,6 +196,7 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
             st.write("Fetching channel info...")  # Debugging Step 1
 
             async def fetch_info():
+                """Asynchronous function to fetch info for multiple Telegram channels."""
                 channel_list = [channel.strip() for channel in channel_input.split(",") if channel.strip()]
                 results = []
 
@@ -207,35 +208,47 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
                     except Exception as e:
                         st.error(f"Failed to fetch info for {channel}: {e}")
 
-                return results, channel_list  # ✅ Now returning channel_list
+                return results, channel_list
 
-            if "channel_data" in st.session_state and "channel_list" in st.session_state:
-                channel_data = st.session_state.channel_data
-                channel_list = st.session_state.channel_list
-            
-                # --- Re-Display Results ---
-                for info in channel_data:
-                    if "Error" in info:
-                        st.error(info["Error"])
-                    else:
-                        st.markdown("### 📌 Channel Information")
-                        for key, value in info.items():
-                            st.write(f"**{key}:** {value}")
-                        st.markdown("---")  # Separator
-            
-                # ✅ Save to a BytesIO buffer instead of a file
-                df = pd.DataFrame(channel_data)
-                filename = f"{channel_list[0]}_info.xlsx" if len(channel_list) == 1 else "multiple_channels_info.xlsx"
-            
-                output = io.BytesIO()
-                with pd.ExcelWriter(output, engine="openpyxl") as writer:
-                    df.to_excel(writer, index=False)
-                output.seek(0)
-            
-                # ✅ Show download button without clearing the screen
-                st.download_button(
-                    label="📥 Download Excel File",
-                    data=output,
-                    file_name=filename,
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                )
+            # Run async function and store results in session state
+            try:
+                channel_data, channel_list = st.session_state.event_loop.run_until_complete(fetch_info())
+                st.session_state.channel_data = channel_data
+                st.session_state.channel_list = channel_list
+            except Exception as e:
+                st.error(f"Error while fetching channel data: {e}")
+
+    # Display the results if available
+    if "channel_data" in st.session_state and st.session_state.channel_data:
+        channel_data = st.session_state.channel_data
+        channel_list = st.session_state.channel_list
+
+        # --- Re-Display Results ---
+        for info in channel_data:
+            if "Error" in info:
+                st.error(info["Error"])
+            else:
+                st.markdown("### 📌 Channel Information")
+                for key, value in info.items():
+                    st.write(f"**{key}:** {value}")
+                st.markdown("---")  # Separator
+
+        # ✅ Convert to DataFrame and save in memory
+        df = pd.DataFrame(channel_data)
+        filename = f"{channel_list[0]}_info.xlsx" if len(channel_list) == 1 else "multiple_channels_info.xlsx"
+
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine="openpyxl") as writer:
+            df.to_excel(writer, index=False)
+        output.seek(0)
+
+        # ✅ Show download button without clearing the screen
+        st.download_button(
+            label="📥 Download Excel File",
+            data=output,
+            file_name=filename,
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+    else:
+        st.warning("No channel data available. Fetch channel info first.")
+

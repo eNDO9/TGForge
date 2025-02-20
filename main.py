@@ -110,3 +110,20 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
                 for key, value in info.items():
                     st.write(f"**{key}:** {value}")
                 st.markdown("---")
+
+        # ✅ Convert to DataFrame and save in memory
+        df = pd.DataFrame(st.session_state.channel_data)
+        filename = "channel_info.xlsx"
+
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine="openpyxl") as writer:
+            df.to_excel(writer, index=False)
+        output.seek(0)
+
+        # ✅ Show download button
+        st.download_button(
+            label="📥 Download Excel File",
+            data=output,
+            file_name=filename,
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )

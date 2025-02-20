@@ -6,8 +6,14 @@ from telegram_client import create_client, delete_session_file
 from fetch_channel import get_channel_info
 from telethon.errors import PhoneNumberInvalidError, PhoneCodeInvalidError, SessionPasswordNeededError
 
+# --- 🔥 Ensure an Event Loop Exists ---
+try:
+    asyncio.get_running_loop()
+except RuntimeError:
+    asyncio.set_event_loop(asyncio.new_event_loop())
+
 # --- Streamlit UI ---
-st.title("Telegram API Authentication")
+st.title("TGForge")
 
 # Ensure session state variables are initialized
 if "auth_step" not in st.session_state:

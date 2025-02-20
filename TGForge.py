@@ -209,7 +209,11 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
 
                 return results, channel_list  # ✅ Now returning channel_list
 
-            channel_data, channel_list = st.session_state.event_loop.run_until_complete(fetch_info())
+            if "channel_data" not in st.session_state or "channel_list" not in st.session_state:
+                st.session_state.channel_data, st.session_state.channel_list = st.session_state.event_loop.run_until_complete(fetch_info())
+            
+            channel_data = st.session_state.channel_data
+            channel_list = st.session_state.channel_list
 
             if not channel_data:
                 st.error("No channel data retrieved. Check if channels exist.")

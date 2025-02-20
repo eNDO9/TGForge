@@ -213,7 +213,7 @@ if st.session_state.get("auth_step") == 3 and st.session_state.get("authenticate
             st.session_state.channel_data, st.session_state.channel_list = asyncio.run(fetch_info())
 
             # ✅ Force rerun to ensure UI updates properly
-            st.experimental_rerun()
+            st.rerun()
 
     # --- Display Results ---
     if st.session_state.get("channel_data") and st.session_state.get("channel_list"):

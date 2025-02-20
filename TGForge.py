@@ -180,7 +180,7 @@ elif st.session_state.auth_step == 2:
             delete_session_file()
 
 # --- Step 3: Fetch Channel Info ---
-elif st.session_state.auth_step == 3 and st.session_state.authenticated:
+if st.session_state.get("auth_step") == 3 and st.session_state.get("authenticated"):
     st.subheader("Authenticated!")
     
     # Ensure UI Loads Properly
@@ -207,35 +207,41 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
                     except Exception as e:
                         st.error(f"Failed to fetch info for {channel}: {e}")
 
-                return results, channel_list  # ✅ Now returning channel_list
+                return results, channel_list
 
-            if "channel_data" in st.session_state and "channel_list" in st.session_state:
-                channel_data = st.session_state.channel_data
-                channel_list = st.session_state.channel_list
-            
-                # --- Re-Display Results ---
-                for info in channel_data:
-                    if "Error" in info:
-                        st.error(info["Error"])
-                    else:
-                        st.markdown("### 📌 Channel Information")
-                        for key, value in info.items():
-                            st.write(f"**{key}:** {value}")
-                        st.markdown("---")  # Separator
-            
-                # ✅ Save to a BytesIO buffer instead of a file
-                df = pd.DataFrame(channel_data)
-                filename = f"{channel_list[0]}_info.xlsx" if len(channel_list) == 1 else "multiple_channels_info.xlsx"
-            
-                output = io.BytesIO()
-                with pd.ExcelWriter(output, engine="openpyxl") as writer:
-                    df.to_excel(writer, index=False)
-                output.seek(0)
-            
-                # ✅ Show download button without clearing the screen
-                st.download_button(
-                    label="📥 Download Excel File",
-                    data=output,
-                    file_name=filename,
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                )
+            # ✅ Store fetched data in session state so it persists
+            st.session_state.channel_data, st.session_state.channel_list = asyncio.run(fetch_info())
+
+            # ✅ Force rerun to ensure UI updates properly
+            st.experimental_rerun()
+
+    # --- Display Results ---
+    if st.session_state.get("channel_data") and st.session_state.get("channel_list"):
+        channel_data = st.session_state.channel_data
+        channel_list = st.session_state.channel_list
+
+        for info in channel_data:
+            if "Error" in info:
+                st.error(info["Error"])
+            else:
+                st.markdown("### 📌 Channel Information")
+                for key, value in info.items():
+                    st.write(f"**{key}:** {value}")
+                st.markdown("---")  # Separator
+
+        # ✅ Save to a BytesIO buffer instead of a file
+        df = pd.DataFrame(channel_data)
+        filename = f"{channel_list[0]}_info.xlsx" if len(channel_list) == 1 else "multiple_channels_info.xlsx"
+
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine="openpyxl") as writer:
+            df.to_excel(writer, index=False)
+        output.seek(0)
+
+        # ✅ Show download button without clearing the screen
+        st.download_button(
+            label="📥 Download Excel File",
+            data=output,
+            file_name=filename,
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )

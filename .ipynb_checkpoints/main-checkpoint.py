@@ -210,26 +210,26 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
         st.session_state.monthly_volume["Total"].plot(ax=ax, title="Monthly Message Volume")
         st.pyplot(fig)
 
-        # ✅ Fix CSV Download
-        csv_output = io.BytesIO()
-        df.to_csv(csv_output, index=False)
-        csv_output.seek(0)
-        st.download_button(
-            "📥 Download Messages (CSV)",
-            data=csv_output.getvalue(),
-            file_name="messages.csv",
-            mime="text/csv",
-        )
+    # ✅ Fix CSV Download
+    csv_output = io.BytesIO()
+    df.to_csv(csv_output, index=False)
+    csv_output.seek(0)
+    st.download_button(
+        "📥 Download Messages (CSV)",
+        data=csv_output.getvalue(),
+        file_name="messages.csv",
+        mime="text/csv",
+    )
 
-        # ✅ Fix XLSX Download
-        output_xlsx = io.BytesIO()
-        with pd.ExcelWriter(output_xlsx, engine="openpyxl") as writer:
-            df_hashtags.to_excel(writer, sheet_name="Top Hashtags", index=False)
-            df_urls.to_excel(writer, sheet_name="Top URLs", index=False)
-        output_xlsx.seek(0)
-        st.download_button(
-            "📥 Download Hashtags & URLs (Excel)",
-            data=output_xlsx.getvalue(),
-            file_name="messages_data.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        )
+    # ✅ Fix XLSX Download
+    output_xlsx = io.BytesIO()
+    with pd.ExcelWriter(output_xlsx, engine="openpyxl") as writer:
+        df_hashtags.to_excel(writer, sheet_name="Top Hashtags", index=False)
+        df_urls.to_excel(writer, sheet_name="Top URLs", index=False)
+    output_xlsx.seek(0)
+    st.download_button(
+        "📥 Download Hashtags & URLs (Excel)",
+        data=output_xlsx.getvalue(),
+        file_name="messages_data.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    )

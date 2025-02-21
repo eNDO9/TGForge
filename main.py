@@ -210,26 +210,51 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
         st.session_state.monthly_volume["Total"].plot(ax=ax, title="Monthly Message Volume")
         st.pyplot(fig)
 
-    # ✅ Fix CSV Download
-    csv_output = io.BytesIO()
-    df.to_csv(csv_output, index=False)
-    csv_output.seek(0)
-    st.download_button(
-        "📥 Download Messages (CSV)",
-        data=csv_output.getvalue(),
-        file_name="messages.csv",
-        mime="text/csv",
-    )
+    # CSV Download
+    if "messages_data" in st.session_state and st.session_state.messages_data is not None:
+        df_messages = pd.DataFrame(st.session_state.messages_data)
+
+        csv_output = io.BytesIO()
+        df_messages.to_csv(csv_output, index=False)
+        csv_output.seek(0)
+        st.download_button(
+            "📥 Download Messages (CSV)",
+            data=csv_output.getvalue(),
+            file_name="messages.csv",
+            mime="text/csv",
+        )
 
     # ✅ Fix XLSX Download
-    output_xlsx = io.BytesIO()
-    with pd.ExcelWriter(output_xlsx, engine="openpyxl") as writer:
-        df_hashtags.to_excel(writer, sheet_name="Top Hashtags", index=False)
-        df_urls.to_excel(writer, sheet_name="Top URLs", index=False)
-    output_xlsx.seek(0)
-    st.download_button(
-        "📥 Download Hashtags & URLs (Excel)",
-        data=output_xlsx.getvalue(),
-        file_name="messages_data.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    )
+    if (
+        "messages_data" in st.session_state and "top_hashtags" in st.session_state
+        and "top_urls" in st.session_state and "top_domains" in st.session_state
+        and "forward_counts" in st.session_state and "daily_volume" in st.session_state
+        and "weekly_volume" in st.session_state and "monthly_volume" in st.session_state
+    ):
+        df_messages = pd.DataFrame(st.session_state.messages_data).nlargest(50, "Views")  # ✅ Top 50 most viewed messages
+        df_top_domains = pd.DataFrame(st.session_state.top_domains).head(25)  # ✅ Top 25 most shared domains
+        df_top_urls = pd.DataFrame(st.session_state.top_urls).head(25)  # ✅ Top 25 most shared URLs
+        df_forward_counts = pd.DataFrame(st.session_state.forward_counts)  # ✅ Forward counts
+        df_top_hashtags = pd.DataFrame(st.session_state.top_hashtags).head(25)  # ✅ Top 25 hashtags
+        df_daily_volume = pd.DataFrame(st.session_state.daily_volume)  # ✅ Daily volume
+        df_weekly_volume = pd.DataFrame(st.session_state.weekly_volume)  # ✅ Weekly volume
+        df_monthly_volume = pd.DataFrame(st.session_state.monthly_volume)  # ✅ Monthly volume
+
+        output_xlsx = io.BytesIO()
+        with pd.ExcelWriter(output_xlsx, engine="openpyxl") as writer:
+            df_messages.to_excel(writer, sheet_name="Top 50 Viewed Posts", index=False)
+            df_top_domains.to_excel(writer, sheet_name="Top 25 Shared Domains", index=False)
+            df_top_urls.to_excel(writer, sheet_name="Top 25 Shared URLs", index=False)
+            df_forward_counts.to_excel(writer, sheet_name="Forward Counts", index=False)
+            df_top_hashtags.to_excel(writer, sheet_name="Top 25 Hashtags", index=False)
+            df_daily_volume.to_excel(writer, sheet_name="Daily Volume", index=True)
+            df_weekly_volume.to_excel(writer, sheet_name="Weekly Volume", index=True)
+            df_monthly_volume.to_excel(writer, sheet_name="Monthly Volume", index=True)
+        output_xlsx.seek(0)
+
+        st.download_button(
+            "📥 Download Messages Data (Excel)",
+            data=output_xlsx.getvalue(),
+            file_name="messages_analysis.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )

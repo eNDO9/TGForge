@@ -7,12 +7,16 @@ from fetch_channel import fetch_channel_data
 from telethon.errors import PhoneNumberInvalidError, PhoneCodeInvalidError, SessionPasswordNeededError
 
 # --- Ensure an Event Loop Exists ---
+import sys
+
 if "event_loop" not in st.session_state:
+    if sys.platform == "win32":
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())  # Windows fix
     st.session_state.event_loop = asyncio.new_event_loop()
     asyncio.set_event_loop(st.session_state.event_loop)
 
 # --- Streamlit UI ---
-st.title("Telegram API Authentication")
+st.title("TGForge - MADE BY NATHAN")
 
 # Ensure session state variables are initialized
 if "auth_step" not in st.session_state:

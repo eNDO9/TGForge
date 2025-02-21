@@ -1,7 +1,6 @@
 from telethon import TelegramClient
 import os
 import streamlit as st
-import asyncio
 
 # Define session file path
 SESSION_PATH = "my_telegram_session"
@@ -19,8 +18,3 @@ def delete_session_file():
 # Function to create a Telegram client
 def create_client(api_id, api_hash):
     return TelegramClient(SESSION_PATH, api_id, api_hash)
-
-# Ensure a single event loop exists
-if "event_loop" not in st.session_state:
-    st.session_state.event_loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(st.session_state.event_loop)

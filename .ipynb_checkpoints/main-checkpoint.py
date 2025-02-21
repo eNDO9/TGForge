@@ -98,7 +98,7 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
     st.subheader("Fetch Telegram Channel Info")
 
     # User Input
-    channel_input = st.text_area("Enter Telegram channel usernames (comma-separated):", "unity_of_fields")
+    channel_input = st.text_area("Enter Telegram channel usernames (comma-separated - e.g. washingtonpost, durov, ...):", "")
 
     if st.button("Fetch Channel Info"):
         # ✅ Run inside the existing event loop (Fixes the asyncio issue)

@@ -319,3 +319,12 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
             file_name="messages_analysis.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
+    # --- Refresh Button (Clears Display But Keeps Data) ---
+    if st.button("🔄 Refresh"):
+        for key in ["channel_data", "forwards_data", "messages_data", "top_hashtags",
+                    "top_urls", "top_domains", "forward_counts", "daily_volume",
+                    "weekly_volume", "monthly_volume"]:
+            if key in st.session_state:
+                del st.session_state[key]  # Remove only displayed data, not authentication
+
+        st.rerun()  # ✅ Force Streamlit to refresh the UI

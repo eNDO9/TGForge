@@ -213,18 +213,19 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
         return df
 
     # Function to ensure continuous dates **without dropping to 0**
-    def format_vo_time_series(df):
+    def format_vo_time_series(df, freq="D"):
         df = df.copy()
         df.index = pd.to_datetime(df.index)  # Ensure datetime index
 
-        # ✅ Create full date range from first to last message date
-        full_date_range = pd.date_range(start=df.index.min(), end=df.index.max(), freq="D")
+        # ✅ Aggregate only on first of each period (e.g., 1st of each month)
+        df = df.resample(freq).sum().reset_index()  # Aggregate by period
 
-        # ✅ Fill missing dates **without forcing zeroes**
-        df = df.reindex(full_date_range).fillna(method="ffill").fillna(0).reset_index()
-        df.columns = ["Date"] + list(df.columns[1:])  # Rename first column to "Date"
+        # ✅ Ensure full range is included (even if no messages)
+        full_date_range = pd.date_range(start=df["index"].min(), end=df["index"].max(), freq=freq)
+        df = df.set_index("index").reindex(full_date_range, fill_value=0).reset_index()
+        df.columns = ["Date", "Total"]
 
-        # ✅ Format labels as "Jan '24"
+        # ✅ Format labels as "Dec '24"
         df["Date Label"] = df["Date"].dt.strftime("%b '%y")
         return df
 

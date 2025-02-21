@@ -199,21 +199,17 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
         st.dataframe(df_urls.head(25))
         
     # ✅ Show volume over time charts
-    import matplotlib.pyplot as plt
     if "daily_volume" in st.session_state:
-        fig, ax = plt.subplots()
-        st.session_state.daily_volume["Total"].plot(ax=ax, title="Daily Message Volume")
-        st.pyplot(fig)
+        st.write("### 📊 Daily Message Volume")
+        st.line_chart(st.session_state.daily_volume["Total"])
 
     if "weekly_volume" in st.session_state:
-        fig, ax = plt.subplots()
-        st.session_state.weekly_volume["Total"].plot(ax=ax, title="Weekly Message Volume")
-        st.pyplot(fig)
+        st.write("### 📊 Weekly Message Volume")
+        st.line_chart(st.session_state.weekly_volume["Total"])
 
     if "monthly_volume" in st.session_state:
-        fig, ax = plt.subplots()
-        st.session_state.monthly_volume["Total"].plot(ax=ax, title="Monthly Message Volume")
-        st.pyplot(fig)
+        st.write("### 📊 Monthly Message Volume")
+        st.line_chart(st.session_state.monthly_volume["Total"])
 
     # CSV Download
     if "messages_data" in st.session_state and st.session_state.messages_data is not None:

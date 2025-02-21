@@ -122,17 +122,8 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
             st.session_state.top_domains, st.session_state.forward_counts, \
             st.session_state.daily_volume, st.session_state.weekly_volume, st.session_state.monthly_volume = \
             st.session_state.event_loop.run_until_complete(fetch_messages(st.session_state.client, channel_input.split(",")))
-    
     # --- Refresh Button (Clears Display But Keeps Data) ---
-    with col4:
-        if st.button("🔄 Refresh"):
-            for key in ["channel_data", "forwards_data", "messages_data", "top_hashtags",
-                        "top_urls", "top_domains", "forward_counts", "daily_volume",
-                        "weekly_volume", "monthly_volume"]:
-                if key in st.session_state:
-                    del st.session_state[key]  # Remove only displayed data, not authentication
-
-        st.rerun()  # ✅ Force Streamlit to refresh the UI
+    if st.button("🔄 Refresh"):
         for key in ["channel_data", "forwards_data", "messages_data", "top_hashtags",
                     "top_urls", "top_domains", "forward_counts", "daily_volume",
                     "weekly_volume", "monthly_volume"]:

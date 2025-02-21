@@ -198,35 +198,30 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
         st.write("### Top URLs")
         st.dataframe(df_urls.head(25))
         
-    # ✅ Show volume over time charts
+    # Helper function to format datetime index into "Jan '24", "Apr '24", etc.
+    def format_datetime_index(df):
+        df = df.copy()
+        df.index = pd.to_datetime(df.index)  # Ensure index is datetime
+        df.index = df.index.strftime("%b '%y")  # Format as "Jan '24"
+        return df
+
+    # ✅ Daily Volume Over Time
     if "daily_volume" in st.session_state:
         st.subheader("📊 Daily Message Volume")
-        df_daily = pd.DataFrame(st.session_state.daily_volume)
-
-        # Format the index as YYYY-MM-DD
-        df_daily.index = df_daily.index.strftime("%Y-%m-%d")
-
+        df_daily = format_datetime_index(pd.DataFrame(st.session_state.daily_volume))
         st.line_chart(df_daily)
 
     # ✅ Weekly Volume Over Time
     if "weekly_volume" in st.session_state:
         st.subheader("📊 Weekly Message Volume")
-        df_weekly = pd.DataFrame(st.session_state.weekly_volume)
-
-        # Format the index as YYYY-%W (Year-Week)
-        df_weekly.index = df_weekly.index.strftime("%Y-%W")
-
+        df_weekly = format_datetime_index(pd.DataFrame(st.session_state.weekly_volume))
         st.line_chart(df_weekly)
 
     # ✅ Monthly Volume Over Time
     if "monthly_volume" in st.session_state:
         st.subheader("📊 Monthly Message Volume")
-        df_monthly = pd.DataFrame(st.session_state.monthly_volume)
-
-    # Format the index as YYYY-%m (Year-Month)
-    df_monthly.index = df_monthly.index.strftime("%Y-%m")
-
-    st.line_chart(df_monthly)
+        df_monthly = format_datetime_index(pd.DataFrame(st.session_state.monthly_volume))
+        st.line_chart(df_monthly)
 
     # CSV Download
     if "messages_data" in st.session_state and st.session_state.messages_data is not None:

@@ -1,8 +1,6 @@
 import streamlit as st
 import asyncio
 import pandas as pd
-import altair as alt
-
 import io
 from telegram_client import create_client, delete_session_file
 from fetch_channel import fetch_channel_data
@@ -214,41 +212,39 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
         df['Date Label'] = df['Date'].dt.strftime("%b '%y")
         return df
 
-    # Function to plot VoT with Altair
-    def plot_vo_time_series(df, title):
-        melted_df = df.melt(id_vars=['Date', 'Date Label'], var_name="Channel", value_name="Messages")
+    # Function to ensure continuous dates **without dropping to 0**
+    def format_vo_time_series(df):
+        df = df.copy()
+        df.index = pd.to_datetime(df.index)  # Ensure datetime index
 
-        chart = (
-            alt.Chart(melted_df)
-            .mark_line()
-            .encode(
-                x=alt.X("Date:T", axis=alt.Axis(title="Date", format="%b %y")),  # Dynamically format months
-                y=alt.Y("Messages:Q", axis=alt.Axis(title="Messages")),
-                color="Channel:N",
-                tooltip=["Date Label", "Channel", "Messages"],
-            )
-            .properties(title=title)
-        )
-        st.altair_chart(chart, use_container_width=True)
+        # ✅ Create full date range from first to last message date
+        full_date_range = pd.date_range(start=df.index.min(), end=df.index.max(), freq="D")
 
-    # ✅ Display Daily Volume with Smoothed Interpolation
+        # ✅ Fill missing dates **without forcing zeroes**
+        df = df.reindex(full_date_range).fillna(method="ffill").fillna(0).reset_index()
+        df.columns = ["Date"] + list(df.columns[1:])  # Rename first column to "Date"
+
+        # ✅ Format labels as "Jan '24"
+        df["Date Label"] = df["Date"].dt.strftime("%b '%y")
+        return df
+
+    # ✅ Display Daily Volume with Streamlit's Line Chart
     if "daily_volume" in st.session_state:
         st.subheader("📊 Daily Message Volume")
         df_daily = format_vo_time_series(pd.DataFrame(st.session_state.daily_volume))
-        plot_vo_time_series(df_daily, "Daily Message Volume")
+        st.line_chart(df_daily.set_index("Date")["Total"])  # ✅ FIX: No artificial zeroes
 
     # ✅ Display Weekly Volume
     if "weekly_volume" in st.session_state:
         st.subheader("📊 Weekly Message Volume")
         df_weekly = format_vo_time_series(pd.DataFrame(st.session_state.weekly_volume))
-        plot_vo_time_series(df_weekly, "Weekly Message Volume")
+        st.line_chart(df_weekly.set_index("Date")["Total"])
 
     # ✅ Display Monthly Volume
     if "monthly_volume" in st.session_state:
         st.subheader("📊 Monthly Message Volume")
         df_monthly = format_vo_time_series(pd.DataFrame(st.session_state.monthly_volume))
-        plot_vo_time_series(df_monthly, "Monthly Message Volume")
-
+        st.line_chart(df_monthly.set_index("Date")["Total"])
     # CSV Download
     if "messages_data" in st.session_state and st.session_state.messages_data is not None:
         df_messages = pd.DataFrame(st.session_state.messages_data)

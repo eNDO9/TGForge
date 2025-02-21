@@ -108,10 +108,8 @@ async def fetch_messages(client, channel_list):
             re.sub(r"[),]+$", "", re.sub(r"^https?://(www\.)?", "", url)).rstrip(".,)").lower()
             for url in df["URLs Shared"].explode().dropna().tolist()
         ]
-
         # Count occurrences of each cleaned URL
         urls_counter = Counter(urls_list)
-
         # Convert the counter to a DataFrame, sort by count, and limit to top 50
         return pd.DataFrame(urls_counter.items(), columns=["URL", "Count"]).sort_values(by="Count", ascending=False).head(50)
     
@@ -129,6 +127,14 @@ async def fetch_messages(client, channel_list):
         fwd_counts_df = fwd_counts_df.sort_values(by="Total Forwards", ascending=False).reset_index()
 
         return fwd_counts_df
+    
+    def period_to_freq(period):
+        if period == "D":
+            return "D"  # Daily
+        elif period == "W":
+            return "W-MON"  # Weekly (start on Monday)
+        elif period == "M":
+            return "MS"  # Month Start
 
     # ✅ Generate Volume Over Time
     def generate_volume_by_period(df, period):

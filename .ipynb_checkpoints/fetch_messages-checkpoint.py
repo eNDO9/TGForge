@@ -128,6 +128,16 @@ async def fetch_messages(client, channel_list):
 
         return fwd_counts_df
     
+    def period_to_freq(period):
+        if period == "D":
+            return "D"  # Daily
+        elif period == "W":
+            return "W-MON"  # Weekly (Start on Monday)
+        elif period == "M":
+            return "MS"  # Month Start
+        else:
+            raise ValueError(f"Unsupported period: {period}")
+
     def generate_volume_by_period(df, period):
         df["Message DateTime (UTC)"] = pd.to_datetime(df["Message DateTime (UTC)"])
 

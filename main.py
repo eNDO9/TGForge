@@ -179,18 +179,6 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
         st.write("### Top Forwarded Channels")
         st.dataframe(df_counts.head(25))
 
-        # ✅ Fix XLSX Download (use BytesIO)
-        output_counts = io.BytesIO()
-        with pd.ExcelWriter(output_counts, engine="openpyxl") as writer:
-            df_counts.to_excel(writer, index=False)
-        output_counts.seek(0)
-        st.download_button(
-            "📥 Download Forward Counts (Excel)",
-            data=output_counts.getvalue(),
-            file_name="forward_counts.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        )
-
     # ✅ Show top shared domains
     if "top_domains" in st.session_state:
         st.write("### Top Domains")

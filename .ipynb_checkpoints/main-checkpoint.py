@@ -154,7 +154,7 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
     # ✅ Show first 25 rows of forward counts in a table
     if "forward_counts" in st.session_state and st.session_state.forward_counts is not None:
         df_counts = pd.DataFrame(st.session_state.forward_counts)
-        st.write("### Forward Counts Preview (First 25 Rows)")
+        st.write("### Top Forwarded Channels")
         st.dataframe(df_counts.head(25))
 
         # ✅ Fix XLSX Download (use BytesIO)
@@ -183,22 +183,19 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
 
     # ✅ Show top shared domains
     if "top_domains" in st.session_state:
+        st.write("### Top Domains")
         st.dataframe(pd.DataFrame(st.session_state.top_domains).head(25))
-
-    # ✅ Show forward counts
-    if "forward_counts" in st.session_state:
-        st.dataframe(pd.DataFrame(st.session_state.forward_counts).head(25))
 
     # ✅ Show first 25 rows of top hashtags
     if "top_hashtags" in st.session_state and st.session_state.top_hashtags is not None:
         df_hashtags = pd.DataFrame(st.session_state.top_hashtags)
-        st.write("### Top Hashtags Preview (First 25 Rows)")
+        st.write("### Top Hashtags")
         st.dataframe(df_hashtags.head(25))
 
     # ✅ Show first 25 rows of top URLs
     if "top_urls" in st.session_state and st.session_state.top_urls is not None:
         df_urls = pd.DataFrame(st.session_state.top_urls)
-        st.write("### Top URLs Preview (First 25 Rows)")
+        st.write("### Top URLs")
         st.dataframe(df_urls.head(25))
         
     # ✅ Show volume over time charts

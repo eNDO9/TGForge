@@ -105,8 +105,17 @@ async def fetch_messages(client, channel_list):
 
     def process_urls(df):
         df["URLs Shared"] = df["URLs Shared"].apply(lambda x: x if isinstance(x, list) else [])
-        urls_list = df["URLs Shared"].explode().dropna().tolist()
+
+        # Flatten the list of URLs, remove unwanted trailing characters, and normalize
+        urls_list = [
+            re.sub(r"[),]+$", "", re.sub(r"^https?://(www\.)?", "", url)).rstrip(".,)").lower()
+            for url in df["URLs Shared"].explode().dropna().tolist()
+        ]
+
+        # Count occurrences of each cleaned URL
         urls_counter = Counter(urls_list)
+
+        # Convert the counter to a DataFrame, sort by count, and limit to top 50
         return pd.DataFrame(urls_counter.items(), columns=["URL", "Count"]).sort_values(by="Count", ascending=False).head(50)
 
     top_hashtags_df = process_hashtags(df)

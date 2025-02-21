@@ -212,7 +212,7 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
 
         # ✅ Fix CSV Download
         csv_output = io.BytesIO()
-        df_messages.to_csv(csv_output, index=False)
+        df.to_csv(csv_output, index=False)
         csv_output.seek(0)
         st.download_button(
             "📥 Download Messages (CSV)",

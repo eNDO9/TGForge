@@ -118,9 +118,10 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
 
     with col3:
         if st.button("Fetch Messages"):
-            st.session_state.messages_data, st.session_state.top_domains, st.session_state.forward_counts, \
+            st.session_state.messages_data, st.session_state.top_hashtags, st.session_state.top_urls, \
+            st.session_state.top_domains, st.session_state.forward_counts, \
             st.session_state.daily_volume, st.session_state.weekly_volume, st.session_state.monthly_volume = \
-                st.session_state.event_loop.run_until_complete(fetch_messages(st.session_state.client, channel_input.split(",")))
+            st.session_state.event_loop.run_until_complete(fetch_messages(st.session_state.client, channel_input.split(",")))
 
     # ✅ Restore original printing format for channel info
     if "channel_data" in st.session_state and st.session_state.channel_data:

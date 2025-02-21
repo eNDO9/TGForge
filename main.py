@@ -168,10 +168,32 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
         if "Views" in df_messages.columns:
             df_top_views = df_messages.sort_values(by="Views", ascending=False).head(25)
             st.write("### Top 25 Most Viewed Posts")
-            st.data_editor(df_top_views)
-        else:
+            st.data_editor(
+                df_top_views,
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "Description": st.column_config.TextColumn(
+                        width="large",  # Expands column width
+                        max_chars=None,  # Removes character limit (default cuts off text)
+                        help="Full text shown when hovered."
+                    )
+                }
+            )
+        else:            
             st.write("### Messages Data Preview (First 25 Rows)")
-            st.dataframe(df_messages.head(25))
+            st.data_editor(
+                df_messages.head(25),
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "Description": st.column_config.TextColumn(
+                        width="large",  # Expands column width
+                        max_chars=None,  # Removes character limit (default cuts off text)
+                        help="Full text shown when hovered."
+                    )
+                }
+            )
             
     # ✅ Show first 25 rows of forward counts in a table
     if "forward_counts" in st.session_state and st.session_state.forward_counts is not None:

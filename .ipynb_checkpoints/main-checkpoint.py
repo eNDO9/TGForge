@@ -212,41 +212,37 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
         df['Date Label'] = df['Date'].dt.strftime("%b '%y")
         return df
 
-    # Function to format VoT with correct start dates and filled gaps
-    def format_vo_time_series(df, freq="D"):
-        df = df.copy()
-
-        # ✅ Ensure DataFrame is not empty
+    # Function to format Monthly Volume Over Time (VoT)
+    def format_monthly_vo_time_series(df):
         if df.empty or df.shape[1] < 2:
-            st.warning(f"No data available for {freq} VoT.")
+            st.warning("No data available for Monthly VoT.")
             return pd.DataFrame()
 
-        # ✅ Ensure datetime index
+        # ✅ Ensure DateTime Index
         if not isinstance(df.index, pd.DatetimeIndex):
-            df[df.columns[0]] = pd.to_datetime(df[df.columns[0]])  # Ensure datetime
+            df[df.columns[0]] = pd.to_datetime(df[df.columns[0]])
             df = df.set_index(df.columns[0])
 
-        # ✅ Determine correct start date
-        min_date = df.index.min()
-        max_date = df.index.max()
+        # ✅ Identify the first and last message date
+        first_message_date = df.index.min()
+        last_message_date = df.index.max()
 
-        if freq == "MS":  # ✅ Monthly Fix: Ensure first month appears
-            min_date = pd.Timestamp(year=min_date.year, month=min_date.month, day=1)  # Force first month
+        # ✅ Force the first month to be included (even if incomplete)
+        first_month_start = first_message_date.replace(day=1)
 
-        elif freq == "W":  # ✅ Weekly Fix: Align to first Monday
-            min_date = min_date - pd.DateOffset(days=min_date.weekday())
+        # ✅ Create a full monthly range from first month to the latest message
+        full_month_range = pd.date_range(start=first_month_start, end=last_message_date, freq="MS")
 
-        # ✅ Generate full range with zero-filling
-        full_date_range = pd.date_range(start=min_date, end=max_date, freq=freq)
-        df = df.reindex(full_date_range, fill_value=0)
+        # ✅ Aggregate messages by month
+        df_monthly = df.resample("MS").sum()
 
-        # ✅ Format labels for better x-axis readability
-        if freq == "MS":
-            df["Date Label"] = df.index.strftime("%b '%y")  # Ex: Dec '24, Jan '25
-        elif freq == "W":
-            df["Date Label"] = df.index.strftime("%d %b '%y")  # Ex: 04 Dec '23
+        # ✅ Reindex with the full month range (fills missing months with `0`)
+        df_monthly = df_monthly.reindex(full_month_range, fill_value=0)
 
-        return df.reset_index(names=["Date"])
+        # ✅ Format x-axis labels for better readability
+        df_monthly["Date Label"] = df_monthly.index.strftime("%b '%y")  # Example: Dec '24, Jan '25
+
+        return df_monthly.reset_index(names=["Date"])
 
     # ✅ Display Daily Volume
     if "daily_volume" in st.session_state:
@@ -262,14 +258,14 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
         if not df_weekly.empty:
             st.line_chart(df_weekly.set_index("Date")["Total"])
 
-    # ✅ Display Monthly Volume (Fix: Start at the first month with messages)
+    # ✅ Display Monthly Volume (Ensuring the First Month Appears)
     if "monthly_volume" in st.session_state:
         st.subheader("📊 Monthly Message Volume")
-        df_monthly = format_vo_time_series(pd.DataFrame(st.session_state.monthly_volume), freq="MS")
+        df_monthly = format_monthly_vo_time_series(pd.DataFrame(st.session_state.monthly_volume))
 
         if not df_monthly.empty:
             df_monthly = df_monthly.set_index("Date")["Total"]
-            st.line_chart(df_monthly)  # ✅ Ensure correct x-axis display
+            st.line_chart(df_monthly)  # ✅ Streamlit built-in chart ensures correct x-axis display
         
     # CSV Download
     if "messages_data" in st.session_state and st.session_state.messages_data is not None:

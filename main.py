@@ -4,6 +4,7 @@ import pandas as pd
 import io
 from telegram_client import create_client, delete_session_file
 from fetch_channel import fetch_channel_data
+from fetch_forwards import fetch_forwards
 from telethon.errors import PhoneNumberInvalidError, PhoneCodeInvalidError, SessionPasswordNeededError
 
 # --- Ensure an Event Loop Exists ---

@@ -115,40 +115,48 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
                 fetch_forwards(st.session_state.client, channel_input.split(","))
             )
 
-    # Show First 25 Rows of Channel Data
+    # ✅ Restore original printing format for channel info
     if "channel_data" in st.session_state and st.session_state.channel_data:
-        df = pd.DataFrame(st.session_state.channel_data)
-        st.write("### Channel Info Preview (First 25 Rows)")
-        st.dataframe(df.head(25))
+        for info in st.session_state.channel_data:
+            if "Error" in info:
+                st.error(info["Error"])
+            else:
+                st.markdown("### 📌 Channel Information")
+                for key, value in info.items():
+                    st.write(f"**{key}:** {value}")
+                st.markdown("---")
 
-        # Download as Excel
-        output = io.BytesIO()
-        with pd.ExcelWriter(output, engine="openpyxl") as writer:
-            df.to_excel(writer, index=False)
-        output.seek(0)
-        st.download_button("📥 Download Channel Info (Excel)", data=output, file_name="channel_info.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-
-    # Show First 25 Rows of Forwards Data
+    # ✅ Show first 25 rows of forwards data in a table
     if "forwards_data" in st.session_state and st.session_state.forwards_data is not None:
         df_fwd = pd.DataFrame(st.session_state.forwards_data)
         st.write("### Forwarded Messages Preview (First 25 Rows)")
         st.dataframe(df_fwd.head(25))
 
-        # Save CSV
-        csv_output = io.StringIO()
+        # ✅ Fix CSV Download (use BytesIO)
+        csv_output = io.BytesIO()
         df_fwd.to_csv(csv_output, index=False)
         csv_output.seek(0)
-        st.download_button("📥 Download Forwards (CSV)", data=csv_output, file_name="forwards.csv", mime="text/csv")
+        st.download_button(
+            "📥 Download Forwards (CSV)",
+            data=csv_output.getvalue(),
+            file_name="forwards.csv",
+            mime="text/csv",
+        )
 
-    # Show First 25 Rows of Forward Counts
+    # ✅ Show first 25 rows of forward counts in a table
     if "forward_counts" in st.session_state and st.session_state.forward_counts is not None:
         df_counts = pd.DataFrame(st.session_state.forward_counts)
         st.write("### Forward Counts Preview (First 25 Rows)")
         st.dataframe(df_counts.head(25))
 
-        # Save Excel
+        # ✅ Fix XLSX Download (use BytesIO)
         output_counts = io.BytesIO()
         with pd.ExcelWriter(output_counts, engine="openpyxl") as writer:
             df_counts.to_excel(writer, index=False)
         output_counts.seek(0)
-        st.download_button("📥 Download Forward Counts (Excel)", data=output_counts, file_name="forward_counts.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        st.download_button(
+            "📥 Download Forward Counts (Excel)",
+            data=output_counts.getvalue(),
+            file_name="forward_counts.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )

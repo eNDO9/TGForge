@@ -128,35 +128,38 @@ async def fetch_messages(client, channel_list):
 
         return fwd_counts_df
     
-        def generate_volume_by_period(df, period):
-            df["Message DateTime (UTC)"] = pd.to_datetime(df["Message DateTime (UTC)"])
+    def generate_volume_by_period(df, period):
+        df["Message DateTime (UTC)"] = pd.to_datetime(df["Message DateTime (UTC)"])
 
-            # Get the actual first and last message dates
-            first_message_date = df["Message DateTime (UTC)"].min()
-            last_message_date = pd.Timestamp.today().normalize()  # End at today
+        # ✅ Identify the first and last message date
+        first_message_date = df["Message DateTime (UTC)"].min()
+        last_message_date = df["Message DateTime (UTC)"].max()
 
-            # Adjust start_date based on period type
-            if period == "D":  # Daily (No change needed)
-                start_date = first_message_date.normalize()
-                freq = "D"
-            elif period == "W":  # Weekly (Start from the first Monday before first message)
-                start_date = first_message_date - pd.DateOffset(days=first_message_date.weekday())
-                freq = "W-MON"
-            elif period == "M":  # Monthly (Start from the first day of the first message's month)
-                start_date = first_message_date.replace(day=1)
-                freq = "MS"
+        # ✅ Adjust first date to ensure the full first period is captured
+        if period == "D":  
+            first_period_start = first_message_date  # No adjustment needed for daily
+        elif period == "W":  
+            first_period_start = first_message_date - pd.offsets.Week(weekday=0)  # Start at the beginning of the first full week (Monday)
+        elif period == "M":  
+            first_period_start = first_message_date.replace(day=1)  # Start at the beginning of the first full month
 
-            # Create full date range
-            all_dates = pd.date_range(start=start_date, end=last_message_date, freq=freq)
-            # Group by the specified period and count messages per channel
-            volume = df.groupby([df["Message DateTime (UTC)"].dt.to_period(period), "Channel"]).size().unstack(fill_value=0)
-            # Add a 'Total' column summing across all channels
-            volume["Total"] = volume.sum(axis=1)
-            # Convert the period back to timestamps for reindexing
-            volume.index = volume.index.to_timestamp()
-            # Reindex with the full date range and fill missing values with 0
-            volume = volume.reindex(all_dates, fill_value=0)
-            return volume
+        # ✅ Generate the full date range to ensure no missing periods
+        full_date_range = pd.date_range(start=first_period_start, end=last_message_date, freq=period_to_freq(period))
+
+        # ✅ Group by the period and count messages per channel
+        volume = df.groupby([df["Message DateTime (UTC)"].dt.to_period(period), "Channel"]).size().unstack(fill_value=0)
+
+        # ✅ Add a 'Total' column summing across all channels
+        volume["Total"] = volume.sum(axis=1)
+
+        # ✅ Convert the period index back to timestamps for proper alignment
+        volume.index = volume.index.to_timestamp()
+
+        # ✅ Reindex to ensure all periods are represented (fill missing with 0)
+        volume = volume.reindex(full_date_range, fill_value=0)
+
+        return volume
+
 
     
     # ✅ Process Domains from URLs
@@ -182,11 +185,6 @@ async def fetch_messages(client, channel_list):
     df_copy = df.dropna(subset=["Message DateTime (UTC)"]).copy()  # Remove missing dates
     df_copy["Message DateTime (UTC)"] = pd.to_datetime(df_copy["Message DateTime (UTC)"], errors="coerce")
     df_copy = df_copy.dropna(subset=["Message DateTime (UTC)"])  # Drop any rows that still have NaT
-
-    # ✅ Debugging print statements
-    print(f"DataFrame shape before VoT generation: {df_copy.shape}")
-    print(f"Min date: {df_copy['Message DateTime (UTC)'].min()}, Max date: {df_copy['Message DateTime (UTC)'].max()}")
-    print(f"Missing values in 'Message DateTime (UTC)': {df_copy['Message DateTime (UTC)'].isna().sum()}")
 
     # ✅ Generate volume over time
     daily_volume = generate_volume_by_period(df_copy, "D")

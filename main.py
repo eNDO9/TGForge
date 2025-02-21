@@ -212,7 +212,7 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
         df['Date Label'] = df['Date'].dt.strftime("%b '%y")
         return df
 
-    # Function to format VoT with correct start dates and filled gaps
+    # Function to format VoT with correct start dates and filled gaps  
     def format_vo_time_series(df, freq="D"):
         df = df.copy()
 
@@ -225,14 +225,14 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
         if not isinstance(df.index, pd.DatetimeIndex):
             df[df.columns[0]] = pd.to_datetime(df[df.columns[0]])  # Ensure datetime
             df = df.set_index(df.columns[0])
-
+            
         # ✅ Determine correct start date
         min_date = df.index.min()
         max_date = df.index.max()
 
-        if freq == "MS":  # ✅ Monthly Fix: Ensure first month appears
-            min_date = pd.Timestamp(year=min_date.year, month=min_date.month, day=1)
-        elif freq == "W":  # ✅ Weekly Fix: Align to first Monday
+        if freq == "MS":  # ✅ Monthly Fix: Start from the first of the first month
+            min_date = min_date.replace(day=1)
+        elif freq == "W":  # ✅ Weekly Fix: Start from the Monday of the first recorded week
             min_date = min_date - pd.DateOffset(days=min_date.weekday())
 
         # ✅ Generate full range with zero-filling
@@ -246,6 +246,20 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
             df["Date Label"] = df.index.strftime("%d %b '%y")  # Ex: 04 Dec '23
 
         return df.reset_index(names=["Date"])
+
+    # ✅ Display Daily Volume
+    if "daily_volume" in st.session_state:
+        st.subheader("📊 Daily Message Volume")
+        df_daily = format_vo_time_series(pd.DataFrame(st.session_state.daily_volume), freq="D")
+        if not df_daily.empty:
+            st.line_chart(df_daily.set_index("Date")["Total"])
+
+    # ✅ Display Weekly Volume (Fix: Start at first Monday)
+    if "weekly_volume" in st.session_state:
+        st.subheader("📊 Weekly Message Volume")
+        df_weekly = format_vo_time_series(pd.DataFrame(st.session_state.weekly_volume), freq="W-MON")
+        if not df_weekly.empty:
+            st.line_chart(df_weekly.set_index("Date")["Total"])
 
     # ✅ Display Monthly Volume (Fix: Start at the first month with messages)
     if "monthly_volume" in st.session_state:

@@ -117,10 +117,18 @@ async def fetch_messages(client, channel_list):
     
     # ✅ Process Forward Counts
     def process_forwards(df):
-        fwd_df = df[df["Is Forward"] == True]
-        fwd_df = fwd_df[~fwd_df["Origin Username"].isin(["Unknown", "Not Available"])]
-        fwd_counts = fwd_df.groupby(["Channel", "Origin Username"]).size().reset_index(name="Count")
-        return fwd_counts.pivot(index="Origin Username", columns="Channel", values="Count").fillna(0)
+        fwd_df = df[df["Is Forward"] == True]  # ✅ Filter forwarded messages
+        fwd_df = fwd_df[~fwd_df["Origin Username"].isin(["Unknown", "Not Available"])]  # ✅ Exclude unknown sources
+
+        # ✅ Generate forward counts
+        fwd_counts_df = fwd_df.groupby(["Channel", "Origin Username"]).size().reset_index(name="Count")
+        fwd_counts_df = fwd_counts_df.pivot(index="Origin Username", columns="Channel", values="Count").fillna(0)
+
+        # ✅ Add "Total Forwards" column & sort
+        fwd_counts_df["Total Forwards"] = fwd_counts_df.sum(axis=1)
+        fwd_counts_df = fwd_counts_df.sort_values(by="Total Forwards", ascending=False).reset_index()
+
+        return fwd_counts_df
 
     # ✅ Generate Volume Over Time
     def generate_volume_by_period(df, period):

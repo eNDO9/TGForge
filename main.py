@@ -198,56 +198,44 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
         st.write("### Top URLs")
         st.dataframe(df_urls.head(25))
         
-    # Function to ensure a continuous date range with 0s
+    # ✅ Function to format a VoT dataframe, ensuring missing dates are filled with 0
     def format_vo_time_series(df):
-        df = df.copy()
-        df.index = pd.to_datetime(df.index)  # Ensure index is datetime
-
-        # ✅ Create full date range from the first to last message date
-        full_date_range = pd.date_range(start=df.index.min(), end=df.index.max(), freq='D')
-        df = df.reindex(full_date_range, fill_value=0).reset_index()
-        df.columns = ['Date'] + list(df.columns[1:])  # Rename first column to 'Date'
-
-        # ✅ Format as "Jan '24"
-        df['Date Label'] = df['Date'].dt.strftime("%b '%y")
-        return df
-
-    # Function to format Monthly Volume Over Time (VoT)
-    def format_monthly_vo_time_series(df):
         if df.empty or df.shape[1] < 2:
-            st.warning("No data available for Monthly VoT.")
+            st.warning("No data available for this VoT.")
             return pd.DataFrame()
 
         # ✅ Ensure DateTime Index
-        if not isinstance(df.index, pd.DatetimeIndex):
-            df[df.columns[0]] = pd.to_datetime(df[df.columns[0]])
-            df = df.set_index(df.columns[0])
+        date_col = df.columns[0]  # First column should be the datetime
+        df[date_col] = pd.to_datetime(df[date_col], errors="coerce")  # Convert, handling errors
+        df = df.set_index(date_col).sort_index()  # Set as index and sort chronologically
 
         # ✅ Identify the first and last message date
         first_message_date = df.index.min()
         last_message_date = df.index.max()
 
-        # ✅ Force the first month to be included (even if incomplete)
-        first_month_start = first_message_date.replace(day=1)
+        if pd.isnull(first_message_date) or pd.isnull(last_message_date):
+            st.warning(f"No valid dates found for VoT.")
+            return pd.DataFrame()
 
-        # ✅ Create a full monthly range from first month to the latest message
-        full_month_range = pd.date_range(start=first_month_start, end=last_message_date, freq="MS")
+        # ✅ Create a full range of dates at the correct frequency
+        full_date_range = pd.date_range(start=first_message_date, end=last_message_date, freq="D")
 
-        # ✅ Aggregate messages by month
-        df_monthly = df.resample("MS").sum()
+        # ✅ Aggregate messages correctly
+        df_vo = df.resample("D").sum()
 
-        # ✅ Reindex with the full month range (fills missing months with `0`)
-        df_monthly = df_monthly.reindex(full_month_range, fill_value=0)
+        # ✅ Reindex with the full range (fills missing periods with `0`)
+        df_vo = df_vo.reindex(full_date_range, fill_value=0)
 
         # ✅ Format x-axis labels for better readability
-        df_monthly["Date Label"] = df_monthly.index.strftime("%b '%y")  # Example: Dec '24, Jan '25
+        df_vo["Date Label"] = df_vo.index.strftime("%b '%y")  # Example: Dec '24, Jan '25
 
-        return df_monthly.reset_index(names=["Date"])
+        return df_vo.reset_index(names=["Date"])
 
-    # ✅ Display Daily Volume
-    if "daily_volume" in st.session_state:
+    # ✅ Handle Daily Volume (Ensuring No Errors)
+    if "daily_volume" in st.session_state and st.session_state.daily_volume is not None:
         st.subheader("📊 Daily Message Volume")
-        df_daily = format_vo_time_series(pd.DataFrame(st.session_state.daily_volume), freq="D")
+        df_daily = format_vo_time_series(pd.DataFrame(st.session_state.daily_volume))
+
         if not df_daily.empty:
             st.line_chart(df_daily.set_index("Date")["Total"])
 

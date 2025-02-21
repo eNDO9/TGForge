@@ -11,7 +11,7 @@ from telethon.tl.types import PeerUser
 async def fetch_messages(client, channel_list):
     """Fetches messages from a list of Telegram channels and processes relevant metadata."""
     all_messages_data = []
-    limit = 1000  # Adjust limit per batch
+    limit = 1000  
 
     for channel_name in channel_list:
         try:
@@ -23,15 +23,13 @@ async def fetch_messages(client, channel_list):
 
             while True:
                 try:
-                    print(f"Fetching messages from {channel_name} with offset {offset_id}...")
                     messages = await client.get_messages(channel, limit=limit, offset_id=offset_id)
                     if not messages:
                         break
 
                     total_messages.extend(messages)
                     offset_id = messages[-1].id
-
-                    time.sleep(1)  # Respectful delay
+                    time.sleep(1)
 
                 except FloodWaitError as e:
                     print(f"Flood wait error. Waiting {e.seconds} seconds...")
@@ -72,7 +70,6 @@ async def fetch_messages(client, channel_list):
                     "Message DateTime (UTC)": message_datetime,
                     "Text": message.text,
                     "Message Type": message_type,
-                    "File Size": message.media.document.size if message.media and hasattr(message.media, "document") else "No File Size",
                     "Is Forward": is_forward,
                     "Origin Username": original_username,
                     "Geo-location": geo_location,
@@ -117,8 +114,43 @@ async def fetch_messages(client, channel_list):
 
         # Convert the counter to a DataFrame, sort by count, and limit to top 50
         return pd.DataFrame(urls_counter.items(), columns=["URL", "Count"]).sort_values(by="Count", ascending=False).head(50)
+    
+    # ✅ Process Forward Counts
+    def process_forwards(df):
+        fwd_df = df[df["Is Forward"] == True]
+        fwd_df = fwd_df[~fwd_df["Origin Username"].isin(["Unknown", "Not Available"])]
+        fwd_counts = fwd_df.groupby(["Channel", "Origin Username"]).size().reset_index(name="Count")
+        return fwd_counts.pivot(index="Origin Username", columns="Channel", values="Count").fillna(0)
 
+    # ✅ Generate Volume Over Time
+    def generate_volume_by_period(df, period):
+        df["Message DateTime (UTC)"] = pd.to_datetime(df["Message DateTime (UTC)"])
+        volume = df.groupby([df["Message DateTime (UTC)"].dt.to_period(period), "Channel"]).size().unstack(fill_value=0)
+        volume["Total"] = volume.sum(axis=1)
+        volume.index = volume.index.to_timestamp()
+        return volume
+    
+    # ✅ Process Domains from URLs
+    def process_domains(df):
+        df["URLs Shared"] = df["URLs Shared"].apply(lambda x: x if isinstance(x, list) else [])
+
+        domains_list = [
+            re.sub(r"[^\w.-]+$", "", re.sub(r"^www\.", "", urlparse(url).netloc)).lower()
+            for url in df["URLs Shared"].explode().dropna().tolist()
+            if urlparse(url).netloc
+        ]
+
+        domains_counter = Counter(domains_list)
+        return pd.DataFrame(domains_counter.items(), columns=["Domain", "Count"]).sort_values(by="Count", ascending=False).head(50)
+
+
+    # Compute top analytics
+    top_domains_df = process_domains(df)
+    forward_counts_df = process_forwards(df)
+    daily_volume = generate_volume_by_period(df, "D")
+    weekly_volume = generate_volume_by_period(df, "W")
+    monthly_volume = generate_volume_by_period(df, "M")
     top_hashtags_df = process_hashtags(df)
     top_urls_df = process_urls(df)
 
-    return df, top_hashtags_df, top_urls_df
+    return df, top_hashtags_df, top_urls_df, top_domains_df, forward_counts_df, daily_volume, weekly_volume, monthly_volume

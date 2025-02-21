@@ -11,7 +11,7 @@ from telethon.tl.types import PeerUser
 async def fetch_messages(client, channel_list):
     """Fetches messages from a list of Telegram channels and processes relevant metadata."""
     all_messages_data = []
-    limit = 1000  # Adjust limit per batch
+    limit = 1000  
 
     for channel_name in channel_list:
         try:
@@ -23,15 +23,13 @@ async def fetch_messages(client, channel_list):
 
             while True:
                 try:
-                    print(f"Fetching messages from {channel_name} with offset {offset_id}...")
                     messages = await client.get_messages(channel, limit=limit, offset_id=offset_id)
                     if not messages:
                         break
 
                     total_messages.extend(messages)
                     offset_id = messages[-1].id
-
-                    time.sleep(1)  # Respectful delay
+                    time.sleep(1)
 
                 except FloodWaitError as e:
                     print(f"Flood wait error. Waiting {e.seconds} seconds...")
@@ -95,19 +93,28 @@ async def fetch_messages(client, channel_list):
     # Convert to DataFrame
     df = pd.DataFrame(all_messages_data)
 
-    # ✅ Process Domains from URLs
-    def process_domains(df):
+    # Generate Analytics (Hashtags, URLs, Volume Trends)
+    def process_hashtags(df):
+        df["Hashtags"] = df["Hashtags"].apply(lambda x: x if isinstance(x, list) else [])
+        hashtags_list = df["Hashtags"].explode().dropna().tolist()
+        hashtags_counter = Counter(hashtags_list)
+        return pd.DataFrame(hashtags_counter.items(), columns=["Hashtag", "Count"]).sort_values(by="Count", ascending=False).head(50)
+
+    def process_urls(df):
         df["URLs Shared"] = df["URLs Shared"].apply(lambda x: x if isinstance(x, list) else [])
 
-        domains_list = [
-            re.sub(r"[^\w.-]+$", "", re.sub(r"^www\.", "", urlparse(url).netloc)).lower()
+        # Flatten the list of URLs, remove unwanted trailing characters, and normalize
+        urls_list = [
+            re.sub(r"[),]+$", "", re.sub(r"^https?://(www\.)?", "", url)).rstrip(".,)").lower()
             for url in df["URLs Shared"].explode().dropna().tolist()
-            if urlparse(url).netloc
         ]
 
-        domains_counter = Counter(domains_list)
-        return pd.DataFrame(domains_counter.items(), columns=["Domain", "Count"]).sort_values(by="Count", ascending=False).head(50)
+        # Count occurrences of each cleaned URL
+        urls_counter = Counter(urls_list)
 
+        # Convert the counter to a DataFrame, sort by count, and limit to top 50
+        return pd.DataFrame(urls_counter.items(), columns=["URL", "Count"]).sort_values(by="Count", ascending=False).head(50)
+    
     # ✅ Process Forward Counts
     def process_forwards(df):
         fwd_df = df[df["Is Forward"] == True]
@@ -122,6 +129,20 @@ async def fetch_messages(client, channel_list):
         volume["Total"] = volume.sum(axis=1)
         volume.index = volume.index.to_timestamp()
         return volume
+    
+    # ✅ Process Domains from URLs
+    def process_domains(df):
+        df["URLs Shared"] = df["URLs Shared"].apply(lambda x: x if isinstance(x, list) else [])
+
+        domains_list = [
+            re.sub(r"[^\w.-]+$", "", re.sub(r"^www\.", "", urlparse(url).netloc)).lower()
+            for url in df["URLs Shared"].explode().dropna().tolist()
+            if urlparse(url).netloc
+        ]
+
+        domains_counter = Counter(domains_list)
+        return pd.DataFrame(domains_counter.items(), columns=["Domain", "Count"]).sort_values(by="Count", ascending=False).head(50)
+
 
     # Compute top analytics
     top_domains_df = process_domains(df)
@@ -129,5 +150,7 @@ async def fetch_messages(client, channel_list):
     daily_volume = generate_volume_by_period(df, "D")
     weekly_volume = generate_volume_by_period(df, "W")
     monthly_volume = generate_volume_by_period(df, "M")
+    top_hashtags_df = process_hashtags(df)
+    top_urls_df = process_urls(df)
 
-    return df, top_domains_df, forward_counts_df, daily_volume, weekly_volume, monthly_volume
+    return df, top_hashtags_df, top_urls_df, top_domains_df, forward_counts_df, daily_volume, weekly_volume, monthly_volume

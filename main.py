@@ -9,7 +9,9 @@ from telethon.errors import PhoneNumberInvalidError, PhoneCodeInvalidError, Sess
 # --- Ensure an Event Loop Exists ---
 import sys
 
-if "event_loop" not in st.session_state:
+try:
+    st.session_state.event_loop = asyncio.get_running_loop()
+except RuntimeError:
     if sys.platform == "win32":
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())  # Windows fix
     st.session_state.event_loop = asyncio.new_event_loop()

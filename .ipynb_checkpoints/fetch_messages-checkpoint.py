@@ -128,38 +128,35 @@ async def fetch_messages(client, channel_list):
 
         return fwd_counts_df
     
-    def period_to_freq(period):
-        if period == "D":
-            return "D"  # Daily
-        elif period == "W":
-            return "W-MON"  # Weekly (start on Monday)
-        elif period == "M":
-            return "MS"  # Month Start
+        def generate_volume_by_period(df, period):
+            df["Message DateTime (UTC)"] = pd.to_datetime(df["Message DateTime (UTC)"])
 
-    # ✅ Generate Volume Over Time
-    def generate_volume_by_period(df, period):
-        df["Message DateTime (UTC)"] = pd.to_datetime(df["Message DateTime (UTC)"])
+            # Get the actual first and last message dates
+            first_message_date = df["Message DateTime (UTC)"].min()
+            last_message_date = pd.Timestamp.today().normalize()  # End at today
 
-        # Get the full date range from the first message to the present day
-        start_date = df["Message DateTime (UTC)"].min().normalize()
-        end_date = pd.Timestamp.today().normalize()
+            # Adjust start_date based on period type
+            if period == "D":  # Daily (No change needed)
+                start_date = first_message_date.normalize()
+                freq = "D"
+            elif period == "W":  # Weekly (Start from the first Monday before first message)
+                start_date = first_message_date - pd.DateOffset(days=first_message_date.weekday())
+                freq = "W-MON"
+            elif period == "M":  # Monthly (Start from the first day of the first message's month)
+                start_date = first_message_date.replace(day=1)
+                freq = "MS"
 
-        # Generate the complete date range
-        all_dates = pd.date_range(start=start_date, end=end_date, freq=period_to_freq(period))
-
-        # Group by the specified period and count messages per channel
-        volume = df.groupby([df["Message DateTime (UTC)"].dt.to_period(period), "Channel"]).size().unstack(fill_value=0)
-
-        # Add a 'Total' column summing across all channels
-        volume["Total"] = volume.sum(axis=1)
-
-        # Convert the period back to timestamps for reindexing
-        volume.index = volume.index.to_timestamp()
-
-        # Reindex with the full date range and fill missing values with 0
-        volume = volume.reindex(all_dates, fill_value=0)
-
-        return volume
+            # Create full date range
+            all_dates = pd.date_range(start=start_date, end=last_message_date, freq=freq)
+            # Group by the specified period and count messages per channel
+            volume = df.groupby([df["Message DateTime (UTC)"].dt.to_period(period), "Channel"]).size().unstack(fill_value=0)
+            # Add a 'Total' column summing across all channels
+            volume["Total"] = volume.sum(axis=1)
+            # Convert the period back to timestamps for reindexing
+            volume.index = volume.index.to_timestamp()
+            # Reindex with the full date range and fill missing values with 0
+            volume = volume.reindex(all_dates, fill_value=0)
+            return volume
 
     
     # ✅ Process Domains from URLs
@@ -171,7 +168,6 @@ async def fetch_messages(client, channel_list):
             for url in df["URLs Shared"].explode().dropna().tolist()
             if urlparse(url).netloc
         ]
-
         domains_counter = Counter(domains_list)
         return pd.DataFrame(domains_counter.items(), columns=["Domain", "Count"]).sort_values(by="Count", ascending=False).head(50)
 

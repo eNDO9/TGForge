@@ -9,13 +9,13 @@ from telethon.errors import PhoneNumberInvalidError, PhoneCodeInvalidError, Sess
 # --- Ensure an Event Loop Exists ---
 import sys
 
-try:
-    st.session_state.event_loop = asyncio.get_running_loop()
-except RuntimeError:
+if "event_loop" not in st.session_state:
     if sys.platform == "win32":
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())  # Windows fix
     st.session_state.event_loop = asyncio.new_event_loop()
     asyncio.set_event_loop(st.session_state.event_loop)
+else:
+    asyncio.set_event_loop(st.session_state.event_loop)  # ✅ Keep the same event loop
 
 # --- Streamlit UI ---
 st.title("TGForge - MADE BY NATHAN")
@@ -77,7 +77,7 @@ elif st.session_state.auth_step == 2:
                 async def sign_in():
                     await st.session_state.client.sign_in(st.session_state.phone_number, verification_code)
 
-                st.session_state.event_loop.run_until_complete(sign_in())
+                st.session_state.event_loop.run_until_complete(sign_in())  # ✅ Ensure same event loop is used
                 st.session_state.auth_step = 3  
                 st.session_state.authenticated = True
                 st.success("Authentication successful!")

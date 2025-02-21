@@ -212,39 +212,50 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
         df['Date Label'] = df['Date'].dt.strftime("%b '%y")
         return df
 
-    # Function to ensure continuous dates **without dropping to 0**
-    def format_vo_time_series(df):
+    # Function to format time series correctly for monthly aggregation
+    def format_vo_time_series(df, date_column="Message DateTime (UTC)", freq="D"):
         df = df.copy()
-        df.index = pd.to_datetime(df.index)  # Ensure datetime index
 
-        # ✅ Create full date range from first to last message date
-        full_date_range = pd.date_range(start=df.index.min(), end=df.index.max(), freq="D")
+        # ✅ Ensure date column exists
+        if date_column not in df.columns:
+            st.error(f"Missing expected column: {date_column}")
+            return pd.DataFrame()  # Return empty DataFrame if error
 
-        # ✅ Fill missing dates **without forcing zeroes**
-        df = df.reindex(full_date_range).fillna(method="ffill").fillna(0).reset_index()
-        df.columns = ["Date"] + list(df.columns[1:])  # Rename first column to "Date"
+        df[date_column] = pd.to_datetime(df[date_column])  # Ensure datetime format
+        df = df.set_index(date_column).resample(freq).sum().reset_index()  # Aggregate by period
 
-        # ✅ Format labels as "Jan '24"
+        # ✅ Ensure full range is included (even if no messages)
+        full_date_range = pd.date_range(start=df[date_column].min(), end=df[date_column].max(), freq=freq)
+        df = df.set_index(date_column).reindex(full_date_range, fill_value=0).reset_index()
+        df.columns = ["Date", "Total"]
+
+        # ✅ Format labels as "Dec '24"
         df["Date Label"] = df["Date"].dt.strftime("%b '%y")
         return df
 
     # ✅ Display Daily Volume with Streamlit's Line Chart
     if "daily_volume" in st.session_state:
         st.subheader("📊 Daily Message Volume")
-        df_daily = format_vo_time_series(pd.DataFrame(st.session_state.daily_volume))
-        st.line_chart(df_daily.set_index("Date")["Total"])  # ✅ FIX: No artificial zeroes
+        df_daily = format_vo_time_series(pd.DataFrame(st.session_state.daily_volume), freq="D")
+        if not df_daily.empty:
+            st.line_chart(df_daily.set_index("Date")["Total"])  # ✅ FIX: No blocky steps
 
     # ✅ Display Weekly Volume
     if "weekly_volume" in st.session_state:
         st.subheader("📊 Weekly Message Volume")
-        df_weekly = format_vo_time_series(pd.DataFrame(st.session_state.weekly_volume))
-        st.line_chart(df_weekly.set_index("Date")["Total"])
+        df_weekly = format_vo_time_series(pd.DataFrame(st.session_state.weekly_volume), freq="W")
+        if not df_weekly.empty:
+            st.line_chart(df_weekly.set_index("Date")["Total"])
 
     # ✅ Display Monthly Volume
     if "monthly_volume" in st.session_state:
         st.subheader("📊 Monthly Message Volume")
-        df_monthly = format_vo_time_series(pd.DataFrame(st.session_state.monthly_volume))
-        st.line_chart(df_monthly.set_index("Date")["Total"])
+        df_monthly = format_vo_time_series(pd.DataFrame(st.session_state.monthly_volume), freq="MS")  # ✅ First day of each month
+        if not df_monthly.empty:
+            st.line_chart(df_monthly.set_index("Date")["Total"])
+
+        
+        
     # CSV Download
     if "messages_data" in st.session_state and st.session_state.messages_data is not None:
         df_messages = pd.DataFrame(st.session_state.messages_data)

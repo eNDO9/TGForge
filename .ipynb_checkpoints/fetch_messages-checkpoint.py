@@ -183,7 +183,12 @@ async def fetch_messages(client, channel_list):
     df_copy["Message DateTime (UTC)"] = pd.to_datetime(df_copy["Message DateTime (UTC)"], errors="coerce")
     df_copy = df_copy.dropna(subset=["Message DateTime (UTC)"])  # Drop any rows that still have NaT
 
-    # ✅ Generate volume over time using cleaned datetime data
+    # ✅ Debugging print statements
+    print(f"DataFrame shape before VoT generation: {df_copy.shape}")
+    print(f"Min date: {df_copy['Message DateTime (UTC)'].min()}, Max date: {df_copy['Message DateTime (UTC)'].max()}")
+    print(f"Missing values in 'Message DateTime (UTC)': {df_copy['Message DateTime (UTC)'].isna().sum()}")
+
+    # ✅ Generate volume over time
     daily_volume = generate_volume_by_period(df_copy, "D")
     weekly_volume = generate_volume_by_period(df_copy, "W")
     monthly_volume = generate_volume_by_period(df_copy, "M")

@@ -200,16 +200,33 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
         
     # ✅ Show volume over time charts
     if "daily_volume" in st.session_state:
-        st.write("### 📊 Daily Message Volume")
-        st.line_chart(st.session_state.daily_volume["Total"])
+        st.subheader("📊 Daily Message Volume")
+        df_daily = pd.DataFrame(st.session_state.daily_volume)
 
+        # Format the index as YYYY-MM-DD
+        df_daily.index = df_daily.index.strftime("%Y-%m-%d")
+
+        st.line_chart(df_daily)
+
+    # ✅ Weekly Volume Over Time
     if "weekly_volume" in st.session_state:
-        st.write("### 📊 Weekly Message Volume")
-        st.line_chart(st.session_state.weekly_volume["Total"])
+        st.subheader("📊 Weekly Message Volume")
+        df_weekly = pd.DataFrame(st.session_state.weekly_volume)
 
+        # Format the index as YYYY-%W (Year-Week)
+        df_weekly.index = df_weekly.index.strftime("%Y-%W")
+
+        st.line_chart(df_weekly)
+
+    # ✅ Monthly Volume Over Time
     if "monthly_volume" in st.session_state:
-        st.write("### 📊 Monthly Message Volume")
-        st.line_chart(st.session_state.monthly_volume["Total"])
+        st.subheader("📊 Monthly Message Volume")
+        df_monthly = pd.DataFrame(st.session_state.monthly_volume)
+
+    # Format the index as YYYY-%m (Year-Month)
+    df_monthly.index = df_monthly.index.strftime("%Y-%m")
+
+    st.line_chart(df_monthly)
 
     # CSV Download
     if "messages_data" in st.session_state and st.session_state.messages_data is not None:

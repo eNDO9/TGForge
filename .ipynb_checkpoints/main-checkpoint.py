@@ -122,6 +122,7 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
             st.session_state.top_domains, st.session_state.forward_counts, \
             st.session_state.daily_volume, st.session_state.weekly_volume, st.session_state.monthly_volume = \
             st.session_state.event_loop.run_until_complete(fetch_messages(st.session_state.client, channel_input.split(",")))
+    
     # --- Refresh Button (Clears Display But Keeps Data) ---
     if st.button("🔄 Refresh"):
         for key in ["channel_data", "forwards_data", "messages_data", "top_hashtags",
@@ -177,18 +178,6 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
         df_counts = pd.DataFrame(st.session_state.forward_counts)
         st.write("### Top Forwarded Channels")
         st.dataframe(df_counts.head(25))
-
-        # ✅ Fix XLSX Download (use BytesIO)
-        output_counts = io.BytesIO()
-        with pd.ExcelWriter(output_counts, engine="openpyxl") as writer:
-            df_counts.to_excel(writer, index=False)
-        output_counts.seek(0)
-        st.download_button(
-            "📥 Download Forward Counts (Excel)",
-            data=output_counts.getvalue(),
-            file_name="forward_counts.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        )
 
     # ✅ Show top shared domains
     if "top_domains" in st.session_state:

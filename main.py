@@ -230,9 +230,9 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
         min_date = df.index.min()
         max_date = df.index.max()
 
-        if freq == "MS":  # ✅ Monthly Fix: Start from the first of the first month
-            min_date = min_date.replace(day=1)
-        elif freq == "W":  # ✅ Weekly Fix: Start from the Monday of the first recorded week
+        if freq == "MS":  # ✅ Monthly Fix: Ensure first month appears
+            min_date = pd.Timestamp(year=min_date.year, month=min_date.month, day=1)
+        elif freq == "W":  # ✅ Weekly Fix: Align to first Monday
             min_date = min_date - pd.DateOffset(days=min_date.weekday())
 
         # ✅ Generate full range with zero-filling
@@ -247,27 +247,12 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
 
         return df.reset_index(names=["Date"])
 
-    # ✅ Display Daily Volume
-    if "daily_volume" in st.session_state:
-        st.subheader("📊 Daily Message Volume")
-        df_daily = format_vo_time_series(pd.DataFrame(st.session_state.daily_volume), freq="D")
-        if not df_daily.empty:
-            st.line_chart(df_daily.set_index("Date")["Total"])
-
-    # ✅ Display Weekly Volume (Fix: Start at first Monday)
-    if "weekly_volume" in st.session_state:
-        st.subheader("📊 Weekly Message Volume")
-        df_weekly = format_vo_time_series(pd.DataFrame(st.session_state.weekly_volume), freq="W-MON")
-        if not df_weekly.empty:
-            st.line_chart(df_weekly.set_index("Date")["Total"])
-
-    # ✅ Display Monthly Volume (Fix: Start at the first month)
+    # ✅ Display Monthly Volume (Fix: Start at the first month with messages)
     if "monthly_volume" in st.session_state:
         st.subheader("📊 Monthly Message Volume")
         df_monthly = format_vo_time_series(pd.DataFrame(st.session_state.monthly_volume), freq="MS")
         if not df_monthly.empty:
             st.line_chart(df_monthly.set_index("Date")["Total"])
-
 
         
     # CSV Download

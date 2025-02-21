@@ -169,9 +169,17 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
           
-    # ✅ Show first 25 rows of messages data
+    # ✅ Show top 25 most viewed posts
     if "messages_data" in st.session_state:
-        st.dataframe(pd.DataFrame(st.session_state.messages_data).head(25))
+        df_messages = pd.DataFrame(st.session_state.messages_data)
+
+        if "Views" in df_messages.columns:
+            df_top_views = df_messages.sort_values(by="Views", ascending=False).head(25)
+            st.write("### Top 25 Most Viewed Posts")
+            st.dataframe(df_top_views)
+        else:
+            st.write("### Messages Data Preview (First 25 Rows)")
+            st.dataframe(df_messages.head(25))
 
     # ✅ Show top shared domains
     if "top_domains" in st.session_state:

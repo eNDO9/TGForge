@@ -168,7 +168,7 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
         if "Views" in df_messages.columns:
             df_top_views = df_messages.sort_values(by="Views", ascending=False).head(25)
             st.write("### Top 25 Most Viewed Posts")
-            st.dataframe(df_top_views)
+            st.data_editor(df_top_views)
         else:
             st.write("### Messages Data Preview (First 25 Rows)")
             st.dataframe(df_messages.head(25))
@@ -177,7 +177,7 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
     if "forward_counts" in st.session_state and st.session_state.forward_counts is not None:
         df_counts = pd.DataFrame(st.session_state.forward_counts)
         st.write("### Top Forwarded Channels")
-        st.dataframe(df_counts.head(25))
+        st.data_editor(df_counts.head(25))
 
     # ✅ Show top shared domains
     if "top_domains" in st.session_state:

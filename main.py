@@ -5,6 +5,7 @@ import io
 from telegram_client import create_client, delete_session_file
 from fetch_channel import fetch_channel_data
 from fetch_forwards import fetch_forwards
+from fetch_messages import fetch_messages
 from telethon.errors import PhoneNumberInvalidError, PhoneCodeInvalidError, SessionPasswordNeededError
 
 # --- Ensure an Event Loop Exists ---
@@ -101,7 +102,7 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
     # User Input
     channel_input = st.text_area("Enter Telegram channel usernames (comma-separated):", "unity_of_fields")
     
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
 
     with col1:
         if st.button("Fetch Channel Info"):
@@ -114,6 +115,11 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
             st.session_state.forwards_data, st.session_state.forward_counts = st.session_state.event_loop.run_until_complete(
                 fetch_forwards(st.session_state.client, channel_input.split(","))
             )
+
+    with col3:
+        if st.button("Fetch Messages"):
+            st.session_state.messages_data, st.session_state.top_hashtags, st.session_state.top_urls = st.session_state.event_loop.run_until_complete(
+                fetch_messages(st.session_state.client, channel_input.split(","))
 
     # ✅ Restore original printing format for channel info
     if "channel_data" in st.session_state and st.session_state.channel_data:
@@ -158,5 +164,47 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
             "📥 Download Forward Counts (Excel)",
             data=output_counts.getvalue(),
             file_name="forward_counts.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+          
+    # ✅ Show first 25 rows of messages data
+    if "messages_data" in st.session_state and st.session_state.messages_data is not None:
+        df_messages = pd.DataFrame(st.session_state.messages_data)
+        st.write("### Messages Preview (First 25 Rows)")
+        st.dataframe(df_messages.head(25))
+
+        # ✅ Fix CSV Download
+        csv_output = io.BytesIO()
+        df_messages.to_csv(csv_output, index=False)
+        csv_output.seek(0)
+        st.download_button(
+            "📥 Download Messages (CSV)",
+            data=csv_output.getvalue(),
+            file_name="messages.csv",
+            mime="text/csv",
+        )
+
+    # ✅ Show first 25 rows of top hashtags
+    if "top_hashtags" in st.session_state and st.session_state.top_hashtags is not None:
+        df_hashtags = pd.DataFrame(st.session_state.top_hashtags)
+        st.write("### Top Hashtags Preview (First 25 Rows)")
+        st.dataframe(df_hashtags.head(25))
+
+    # ✅ Show first 25 rows of top URLs
+    if "top_urls" in st.session_state and st.session_state.top_urls is not None:
+        df_urls = pd.DataFrame(st.session_state.top_urls)
+        st.write("### Top URLs Preview (First 25 Rows)")
+        st.dataframe(df_urls.head(25))
+
+        # ✅ Fix XLSX Download
+        output_xlsx = io.BytesIO()
+        with pd.ExcelWriter(output_xlsx, engine="openpyxl") as writer:
+            df_hashtags.to_excel(writer, sheet_name="Top Hashtags", index=False)
+            df_urls.to_excel(writer, sheet_name="Top URLs", index=False)
+        output_xlsx.seek(0)
+        st.download_button(
+            "📥 Download Hashtags & URLs (Excel)",
+            data=output_xlsx.getvalue(),
+            file_name="messages_data.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )

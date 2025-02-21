@@ -118,9 +118,9 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
 
     with col3:
         if st.button("Fetch Messages"):
-            st.session_state.messages_data, st.session_state.top_hashtags, st.session_state.top_urls = st.session_state.event_loop.run_until_complete(
-                fetch_messages(st.session_state.client, channel_input.split(","))
-            )
+            st.session_state.messages_data, st.session_state.top_domains, st.session_state.forward_counts, \
+            st.session_state.daily_volume, st.session_state.weekly_volume, st.session_state.monthly_volume = \
+                st.session_state.event_loop.run_until_complete(fetch_messages(st.session_state.client, channel_input.split(",")))
 
     # ✅ Restore original printing format for channel info
     if "channel_data" in st.session_state and st.session_state.channel_data:
@@ -169,21 +169,16 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
         )
           
     # ✅ Show first 25 rows of messages data
-    if "messages_data" in st.session_state and st.session_state.messages_data is not None:
-        df_messages = pd.DataFrame(st.session_state.messages_data)
-        st.write("### Messages Preview (First 25 Rows)")
-        st.dataframe(df_messages.head(25))
+    if "messages_data" in st.session_state:
+        st.dataframe(pd.DataFrame(st.session_state.messages_data).head(25))
 
-        # ✅ Fix CSV Download
-        csv_output = io.BytesIO()
-        df_messages.to_csv(csv_output, index=False)
-        csv_output.seek(0)
-        st.download_button(
-            "📥 Download Messages (CSV)",
-            data=csv_output.getvalue(),
-            file_name="messages.csv",
-            mime="text/csv",
-        )
+    # ✅ Show top shared domains
+    if "top_domains" in st.session_state:
+        st.dataframe(pd.DataFrame(st.session_state.top_domains).head(25))
+
+    # ✅ Show forward counts
+    if "forward_counts" in st.session_state:
+        st.dataframe(pd.DataFrame(st.session_state.forward_counts).head(25))
 
     # ✅ Show first 25 rows of top hashtags
     if "top_hashtags" in st.session_state and st.session_state.top_hashtags is not None:
@@ -196,6 +191,34 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
         df_urls = pd.DataFrame(st.session_state.top_urls)
         st.write("### Top URLs Preview (First 25 Rows)")
         st.dataframe(df_urls.head(25))
+        
+    # ✅ Show volume over time charts
+    import matplotlib.pyplot as plt
+    if "daily_volume" in st.session_state:
+        fig, ax = plt.subplots()
+        st.session_state.daily_volume["Total"].plot(ax=ax, title="Daily Message Volume")
+        st.pyplot(fig)
+
+    if "weekly_volume" in st.session_state:
+        fig, ax = plt.subplots()
+        st.session_state.weekly_volume["Total"].plot(ax=ax, title="Weekly Message Volume")
+        st.pyplot(fig)
+
+    if "monthly_volume" in st.session_state:
+        fig, ax = plt.subplots()
+        st.session_state.monthly_volume["Total"].plot(ax=ax, title="Monthly Message Volume")
+        st.pyplot(fig)
+
+        # ✅ Fix CSV Download
+        csv_output = io.BytesIO()
+        df_messages.to_csv(csv_output, index=False)
+        csv_output.seek(0)
+        st.download_button(
+            "📥 Download Messages (CSV)",
+            data=csv_output.getvalue(),
+            file_name="messages.csv",
+            mime="text/csv",
+        )
 
         # ✅ Fix XLSX Download
         output_xlsx = io.BytesIO()

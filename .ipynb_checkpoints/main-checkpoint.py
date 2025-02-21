@@ -182,19 +182,19 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
     # ✅ Show top shared domains
     if "top_domains" in st.session_state:
         st.write("### Top Domains")
-        st.metric(pd.DataFrame(st.session_state.top_domains).head(25))
+        st.data_editor(pd.DataFrame(st.session_state.top_domains).head(25))
 
     # ✅ Show first 25 rows of top hashtags
     if "top_hashtags" in st.session_state and st.session_state.top_hashtags is not None:
         df_hashtags = pd.DataFrame(st.session_state.top_hashtags)
         st.write("### Top Hashtags")
-        st.metric(df_hashtags.head(25))
+        st.data_editor(df_hashtags.head(25))
 
     # ✅ Show first 25 rows of top URLs
     if "top_urls" in st.session_state and st.session_state.top_urls is not None:
         df_urls = pd.DataFrame(st.session_state.top_urls)
         st.write("### Top URLs")
-        st.metric(df_urls.head(25))
+        st.data_editor(df_urls.head(25))
         
     # Function to ensure a continuous date range with 0s
     def format_vo_time_series(df):

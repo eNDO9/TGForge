@@ -198,29 +198,35 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
         st.write("### Top URLs")
         st.dataframe(df_urls.head(25))
         
-    # Helper function to format datetime index into "Jan '24", "Apr '24", etc.
-    def format_datetime_index(df):
+    # Function to ensure full date range with 0s and format datetime index
+    def format_vo_time_series(df):
         df = df.copy()
         df.index = pd.to_datetime(df.index)  # Ensure index is datetime
-        df.index = df.index.strftime("%b '%y")  # Format as "Jan '24"
+
+        # ✅ Create a full date range from the first to last message date
+        full_date_range = pd.date_range(start=df.index.min(), end=df.index.max(), freq='D')
+        df = df.reindex(full_date_range, fill_value=0)  # Fill missing days with 0
+
+        # ✅ Format as "Jan '24"
+        df.index = df.index.strftime("%b '%y")
         return df
 
-    # ✅ Daily Volume Over Time
+    # ✅ Display Daily Volume with Fixed Formatting
     if "daily_volume" in st.session_state:
         st.subheader("📊 Daily Message Volume")
-        df_daily = format_datetime_index(pd.DataFrame(st.session_state.daily_volume))
+        df_daily = format_vo_time_series(pd.DataFrame(st.session_state.daily_volume))
         st.line_chart(df_daily)
 
-    # ✅ Weekly Volume Over Time
+    # ✅ Display Weekly Volume
     if "weekly_volume" in st.session_state:
         st.subheader("📊 Weekly Message Volume")
-        df_weekly = format_datetime_index(pd.DataFrame(st.session_state.weekly_volume))
+        df_weekly = format_vo_time_series(pd.DataFrame(st.session_state.weekly_volume))
         st.line_chart(df_weekly)
 
-    # ✅ Monthly Volume Over Time
+    # ✅ Display Monthly Volume
     if "monthly_volume" in st.session_state:
         st.subheader("📊 Monthly Message Volume")
-        df_monthly = format_datetime_index(pd.DataFrame(st.session_state.monthly_volume))
+        df_monthly = format_vo_time_series(pd.DataFrame(st.session_state.monthly_volume))
         st.line_chart(df_monthly)
 
     # CSV Download

@@ -95,41 +95,59 @@ elif st.session_state.auth_step == 2:
 
 # --- Step 3: Fetch Channel Info UI ---
 elif st.session_state.auth_step == 3 and st.session_state.authenticated:
-    st.subheader("Fetch Telegram Channel Info")
+    st.subheader("Fetch Telegram Channel Data")
 
     # User Input
-    channel_input = st.text_area("Enter Telegram channel usernames (comma-separated - e.g. washingtonpost, durov, ...):", "")
+    channel_input = st.text_area("Enter Telegram channel usernames (comma-separated):", "unity_of_fields")
+    
+    col1, col2 = st.columns(2)
 
-    if st.button("Fetch Channel Info"):
-        # ✅ Run inside the existing event loop (Fixes the asyncio issue)
-        st.session_state.channel_data = st.session_state.event_loop.run_until_complete(
-            fetch_channel_data(st.session_state.client, channel_input.split(","))
-        )
+    with col1:
+        if st.button("Fetch Channel Info"):
+            st.session_state.channel_data = st.session_state.event_loop.run_until_complete(
+                fetch_channel_data(st.session_state.client, channel_input.split(","))
+            )
 
-    # Display the results if available
+    with col2:
+        if st.button("Fetch Forwards"):
+            st.session_state.forwards_data, st.session_state.forward_counts = st.session_state.event_loop.run_until_complete(
+                fetch_forwards(st.session_state.client, channel_input.split(","))
+            )
+
+    # Show First 25 Rows of Channel Data
     if "channel_data" in st.session_state and st.session_state.channel_data:
-        for info in st.session_state.channel_data:
-            if "Error" in info:
-                st.error(info["Error"])
-            else:
-                st.markdown("### 📌 Channel Information")
-                for key, value in info.items():
-                    st.write(f"**{key}:** {value}")
-                st.markdown("---")
-
-        # ✅ Convert to DataFrame and save in memory
         df = pd.DataFrame(st.session_state.channel_data)
-        filename = "channel_info.xlsx"
+        st.write("### Channel Info Preview (First 25 Rows)")
+        st.dataframe(df.head(25))
 
+        # Download as Excel
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine="openpyxl") as writer:
             df.to_excel(writer, index=False)
         output.seek(0)
+        st.download_button("📥 Download Channel Info (Excel)", data=output, file_name="channel_info.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
-        # ✅ Show download button
-        st.download_button(
-            label="📥 Download Excel File",
-            data=output,
-            file_name=filename,
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        )
+    # Show First 25 Rows of Forwards Data
+    if "forwards_data" in st.session_state and st.session_state.forwards_data is not None:
+        df_fwd = pd.DataFrame(st.session_state.forwards_data)
+        st.write("### Forwarded Messages Preview (First 25 Rows)")
+        st.dataframe(df_fwd.head(25))
+
+        # Save CSV
+        csv_output = io.StringIO()
+        df_fwd.to_csv(csv_output, index=False)
+        csv_output.seek(0)
+        st.download_button("📥 Download Forwards (CSV)", data=csv_output, file_name="forwards.csv", mime="text/csv")
+
+    # Show First 25 Rows of Forward Counts
+    if "forward_counts" in st.session_state and st.session_state.forward_counts is not None:
+        df_counts = pd.DataFrame(st.session_state.forward_counts)
+        st.write("### Forward Counts Preview (First 25 Rows)")
+        st.dataframe(df_counts.head(25))
+
+        # Save Excel
+        output_counts = io.BytesIO()
+        with pd.ExcelWriter(output_counts, engine="openpyxl") as writer:
+            df_counts.to_excel(writer, index=False)
+        output_counts.seek(0)
+        st.download_button("📥 Download Forward Counts (Excel)", data=output_counts, file_name="forward_counts.xlsx", mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")

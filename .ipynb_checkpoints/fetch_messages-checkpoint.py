@@ -175,10 +175,17 @@ async def fetch_messages(client, channel_list):
     # Compute top analytics
     top_domains_df = process_domains(df)
     forward_counts_df = process_forwards(df)
-    daily_volume = generate_volume_by_period(df, "D")
-    weekly_volume = generate_volume_by_period(df, "W")
-    monthly_volume = generate_volume_by_period(df, "M")
     top_hashtags_df = process_hashtags(df)
     top_urls_df = process_urls(df)
+    
+    # ✅ Ensure 'Message DateTime (UTC)' is a valid datetime format
+    df_copy = df.dropna(subset=["Message DateTime (UTC)"]).copy()  # Remove missing dates
+    df_copy["Message DateTime (UTC)"] = pd.to_datetime(df_copy["Message DateTime (UTC)"], errors="coerce")
+    df_copy = df_copy.dropna(subset=["Message DateTime (UTC)"])  # Drop any rows that still have NaT
+
+    # ✅ Generate volume over time using cleaned datetime data
+    daily_volume = generate_volume_by_period(df_copy, "D")
+    weekly_volume = generate_volume_by_period(df_copy, "W")
+    monthly_volume = generate_volume_by_period(df_copy, "M")
 
     return df, top_hashtags_df, top_urls_df, top_domains_df, forward_counts_df, daily_volume, weekly_volume, monthly_volume

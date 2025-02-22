@@ -150,18 +150,22 @@ async def fetch_messages(client, channel_list):
         return daily_counts.reset_index().rename(columns={"index": "Date", 0: "Total"})
 
     def generate_weekly_volume(df):
+        """Generates weekly message counts, keeping only the first date of each week."""
         df["Message DateTime (UTC)"] = pd.to_datetime(df["Message DateTime (UTC)"])
-        # ✅ Extract the start of the week (based on the first date in the dataset)
-        first_date = df["Message DateTime (UTC)"].min()
-        df["Week"] = df["Message DateTime (UTC)"].dt.to_period("W").apply(lambda r: r.start_time)
-        # ✅ Aggregate weekly counts
-        weekly_counts = df.groupby("Week").size()
-        # ✅ Generate a complete range from first message date, ensuring no missing early weeks
-        full_range = pd.date_range(start=first_date, end=weekly_counts.index.max(), freq="W-MON")
-        # ✅ Reindex to include all weeks (filling missing weeks with 0)
-        weekly_counts = weekly_counts.reindex(full_range, fill_value=0)
-        return weekly_counts.reset_index().rename(columns={"index": "Week", 0: "Total"})
 
+        # ✅ Group by week (starting Monday)
+        weekly_counts = df.groupby(df["Message DateTime (UTC)"].dt.to_period("W-MON")).size()
+
+        # ✅ Generate a full range of weeks
+        full_range = pd.period_range(start=weekly_counts.index.min(), end=weekly_counts.index.max(), freq="W-MON")
+
+        # ✅ Reindex to ensure all weeks are present (filling missing weeks with 0)
+        weekly_counts = weekly_counts.reindex(full_range, fill_value=0)
+
+        # ✅ Convert PeriodIndex to just the first date of the week (keeping only YYYY-MM-DD)
+        weekly_counts.index = weekly_counts.index.to_timestamp()
+
+        return weekly_counts.reset_index().rename(columns={"index": "Week", 0: "Total"})
 
     def generate_monthly_volume(df):
         df["Message DateTime (UTC)"] = pd.to_datetime(df["Message DateTime (UTC)"])

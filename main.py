@@ -221,16 +221,19 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
     if "daily_volume" in st.session_state:
         st.subheader("Daily Message Volume")
         df_daily = pd.DataFrame(st.session_state.daily_volume)
-        st.line_chart(df_daily.set_index("Date")["Total"])
+        st.line_chart(df_daily.set_index("Date")["Total"], 
+                      color=["#C7074D", "#B4B2B1", "#4C4193", "#0068B2", "#E76863", "#5C6771"])
 
     if "weekly_volume" in st.session_state:
         st.subheader("Weekly Message Volume")
         df_weekly = pd.DataFrame(st.session_state.weekly_volume)
-        st.line_chart(df_weekly.set_index("Week")["Total"])
+        st.line_chart(df_weekly.set_index("Week")["Total"], 
+                      color=["#C7074D", "#B4B2B1", "#4C4193", "#0068B2", "#E76863", "#5C6771"])
 
     if "monthly_volume" in st.session_state:
         st.subheader("Monthly Message Volume")
-        df_monthly = pd.DataFrame(st.session_state.monthly_volume)
+        df_monthly = pd.DataFrame(st.session_state.monthly_volume, 
+                      color=["#C7074D", "#B4B2B1", "#4C4193", "#0068B2", "#E76863", "#5C6771"])
         st.line_chart(df_monthly.set_index("Year-Month")["Total"])
         
     # CSV Download

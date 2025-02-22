@@ -142,39 +142,68 @@ async def fetch_messages(client, channel_list):
     
     # Volume Helper functions
     def generate_daily_volume(df):
+        """Generates daily message counts per channel."""
         df["Message DateTime (UTC)"] = pd.to_datetime(df["Message DateTime (UTC)"])
-        daily_counts = df.groupby(df["Message DateTime (UTC)"].dt.date).size()
-        full_range = pd.date_range(start=daily_counts.index.min(), end=daily_counts.index.max(), freq="D")
-        daily_counts = daily_counts.reindex(full_range, fill_value=0)
-        daily_counts.index = daily_counts.index.date
-        return daily_counts.reset_index().rename(columns={"index": "Date", 0: "Total"})
+        df["Date"] = df["Message DateTime (UTC)"].dt.date
+
+        # ✅ Count messages per day per channel
+        daily_counts = df.groupby(["Date", "Channel"]).size().reset_index(name="Total")
+
+        # ✅ Generate full date range
+        full_range = pd.date_range(start=daily_counts["Date"].min(), end=daily_counts["Date"].max(), freq="D")
+
+        # ✅ Create a full DataFrame with all channels
+        full_dates_df = pd.DataFrame({"Date": full_range})
+        daily_counts["Date"] = pd.to_datetime(daily_counts["Date"])
+
+        # ✅ Pivot to make each channel a separate column
+        daily_counts_pivot = daily_counts.pivot(index="Date", columns="Channel", values="Total").fillna(0)
+
+        return daily_counts_pivot.reset_index()
 
     def generate_weekly_volume(df):
-        """Generates weekly message counts, keeping only the first date of each week."""
+        """Generates weekly message counts per channel."""
         df["Message DateTime (UTC)"] = pd.to_datetime(df["Message DateTime (UTC)"])
 
-        # ✅ Group by week (starting Monday)
-        weekly_counts = df.groupby(df["Message DateTime (UTC)"].dt.to_period("W-MON")).size()
+        # ✅ Extract the start of the week (Monday)
+        df["Week"] = df["Message DateTime (UTC)"].dt.to_period("W-MON").apply(lambda r: r.start_time)
 
-        # ✅ Generate a full range of weeks
-        full_range = pd.period_range(start=weekly_counts.index.min(), end=weekly_counts.index.max(), freq="W-MON")
+        # ✅ Count messages per week per channel
+        weekly_counts = df.groupby(["Week", "Channel"]).size().reset_index(name="Total")
 
-        # ✅ Reindex to ensure all weeks are present (filling missing weeks with 0)
-        weekly_counts = weekly_counts.reindex(full_range, fill_value=0)
+        # ✅ Generate full week range
+        full_range = pd.date_range(start=weekly_counts["Week"].min(), end=weekly_counts["Week"].max(), freq="W-MON")
 
-        # ✅ Convert PeriodIndex to just the first date of the week (keeping only YYYY-MM-DD)
-        weekly_counts.index = weekly_counts.index.to_timestamp()
+        # ✅ Create a full DataFrame with all channels
+        full_weeks_df = pd.DataFrame({"Week": full_range})
+        weekly_counts["Week"] = pd.to_datetime(weekly_counts["Week"])
 
-        return weekly_counts.reset_index().rename(columns={"index": "Week", 0: "Total"})
+        # ✅ Pivot to make each channel a separate column
+        weekly_counts_pivot = weekly_counts.pivot(index="Week", columns="Channel", values="Total").fillna(0)
+
+        return weekly_counts_pivot.reset_index()
 
     def generate_monthly_volume(df):
+        """Generates monthly message counts per channel."""
         df["Message DateTime (UTC)"] = pd.to_datetime(df["Message DateTime (UTC)"])
-        monthly_counts = df.groupby(df["Message DateTime (UTC)"].dt.to_period("M")).size()
-        # ✅ Fix: Convert period format to first day of the month
-        monthly_counts.index = monthly_counts.index.to_timestamp()
-        full_range = pd.date_range(start=monthly_counts.index.min(), end=monthly_counts.index.max(), freq="MS")
-        monthly_counts = monthly_counts.reindex(full_range, fill_value=0)
-        return monthly_counts.reset_index().rename(columns={"index": "Year-Month", 0: "Total"})
+
+        # ✅ Extract the first day of the month
+        df["Year-Month"] = df["Message DateTime (UTC)"].dt.to_period("M").apply(lambda r: r.start_time)
+
+        # ✅ Count messages per month per channel
+        monthly_counts = df.groupby(["Year-Month", "Channel"]).size().reset_index(name="Total")
+
+        # ✅ Generate full month range
+        full_range = pd.date_range(start=monthly_counts["Year-Month"].min(), end=monthly_counts["Year-Month"].max(), freq="MS")
+
+        # ✅ Create a full DataFrame with all channels
+        full_months_df = pd.DataFrame({"Year-Month": full_range})
+        monthly_counts["Year-Month"] = pd.to_datetime(monthly_counts["Year-Month"])
+
+        # ✅ Pivot to make each channel a separate column
+        monthly_counts_pivot = monthly_counts.pivot(index="Year-Month", columns="Channel", values="Total").fillna(0)
+
+        return monthly_counts_pivot.reset_index()
 
     # Compute top analytics
     top_domains_df = process_domains(df)

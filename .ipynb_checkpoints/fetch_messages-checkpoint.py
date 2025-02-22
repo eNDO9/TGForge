@@ -127,41 +127,6 @@ async def fetch_messages(client, channel_list):
         fwd_counts_df = fwd_counts_df.sort_values(by="Total Forwards", ascending=False).reset_index()
 
         return fwd_counts_df
-    
-    def generate_daily_volume(df):
-        # Convert to datetime
-        df["Message DateTime (UTC)"] = pd.to_datetime(df["Message DateTime (UTC)"])
-        # Extract date and count messages
-        daily_counts = df.groupby(df["Message DateTime (UTC)"].dt.date).size()
-        # Create a complete date range
-        full_range = pd.date_range(start=daily_counts.index.min(), end=daily_counts.index.max(), freq='D')
-        # Reindex to ensure missing days are filled with 0
-        daily_counts = daily_counts.reindex(full_range, fill_value=0)
-        # Convert index to date format
-        daily_counts.index = daily_counts.index.date
-        return daily_counts
-
-    def generate_weekly_volume(df):
-        # Convert to datetime
-        df["Message DateTime (UTC)"] = pd.to_datetime(df["Message DateTime (UTC)"])
-        # Extract week starting on Monday
-        weekly_counts = df.groupby(df["Message DateTime (UTC)"].dt.to_period("W-MON")).size()
-        # Create a complete week range
-        full_range = pd.period_range(start=weekly_counts.index.min(), end=weekly_counts.index.max(), freq='W-MON')
-        # Reindex to ensure missing weeks are filled with 0
-        weekly_counts = weekly_counts.reindex(full_range, fill_value=0)
-        return weekly_counts
-
-    def generate_monthly_volume(df):
-        # Convert to datetime
-        df["Message DateTime (UTC)"] = pd.to_datetime(df["Message DateTime (UTC)"])
-        # Extract year-month
-        monthly_counts = df.groupby(df["Message DateTime (UTC)"].dt.to_period("M")).size()
-        # Create a complete month range from the first message month
-        full_range = pd.period_range(start=monthly_counts.index.min(), end=monthly_counts.index.max(), freq='M')
-        # Reindex to ensure missing months are filled with 0
-        monthly_counts = monthly_counts.reindex(full_range, fill_value=0)
-        return monthly_counts
 
     # ✅ Process Domains from URLs
     def process_domains(df):
@@ -174,6 +139,29 @@ async def fetch_messages(client, channel_list):
         ]
         domains_counter = Counter(domains_list)
         return pd.DataFrame(domains_counter.items(), columns=["Domain", "Count"]).sort_values(by="Count", ascending=False).head(50)
+    
+    # Volume Helper functions
+    def generate_daily_volume(df):
+        df["Message DateTime (UTC)"] = pd.to_datetime(df["Message DateTime (UTC)"])
+        daily_counts = df.groupby(df["Message DateTime (UTC)"].dt.date).size()
+        full_range = pd.date_range(start=daily_counts.index.min(), end=daily_counts.index.max(), freq="D")
+        daily_counts = daily_counts.reindex(full_range, fill_value=0)
+        daily_counts.index = daily_counts.index.date
+        return daily_counts.reset_index().rename(columns={"index": "Date", 0: "Total"})
+
+    def generate_weekly_volume(df):
+        df["Message DateTime (UTC)"] = pd.to_datetime(df["Message DateTime (UTC)"])
+        weekly_counts = df.groupby(df["Message DateTime (UTC)"].dt.to_period("W-MON")).size()
+        full_range = pd.period_range(start=weekly_counts.index.min(), end=weekly_counts.index.max(), freq="W-MON")
+        weekly_counts = weekly_counts.reindex(full_range, fill_value=0)
+        return weekly_counts.reset_index().rename(columns={"index": "Week", 0: "Total"})
+
+    def generate_monthly_volume(df):
+        df["Message DateTime (UTC)"] = pd.to_datetime(df["Message DateTime (UTC)"])
+        monthly_counts = df.groupby(df["Message DateTime (UTC)"].dt.to_period("M")).size()
+        full_range = pd.period_range(start=monthly_counts.index.min(), end=monthly_counts.index.max(), freq="M")
+        monthly_counts = monthly_counts.reindex(full_range, fill_value=0)
+        return monthly_counts.reset_index().rename(columns={"index": "Year-Month", 0: "Total"})
 
 
     # Compute top analytics
@@ -182,14 +170,10 @@ async def fetch_messages(client, channel_list):
     top_hashtags_df = process_hashtags(df)
     top_urls_df = process_urls(df)
     
-    # ✅ Ensure 'Message DateTime (UTC)' is a valid datetime format
-    df_copy = df.dropna(subset=["Message DateTime (UTC)"]).copy()  # Remove missing dates
-    df_copy["Message DateTime (UTC)"] = pd.to_datetime(df_copy["Message DateTime (UTC)"], errors="coerce")
-    df_copy = df_copy.dropna(subset=["Message DateTime (UTC)"])  # Drop any rows that still have NaT
+    # ✅ Add Volume Analysis
+    daily_volume = generate_daily_volume(df)
+    weekly_volume = generate_weekly_volume(df)
+    monthly_volume = generate_monthly_volume(df)
 
-    # ✅ Generate volume over time
-    daily_volume = generate_volume_by_period(df_copy)
-    weekly_volume = generate_volume_by_period(df_copy)
-    monthly_volume = generate_volume_by_period(df_copy)
 
     return df, top_hashtags_df, top_urls_df, top_domains_df, forward_counts_df, daily_volume, weekly_volume, monthly_volume

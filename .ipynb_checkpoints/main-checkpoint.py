@@ -130,7 +130,6 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
                     "weekly_volume", "monthly_volume"]:
             if key in st.session_state:
                 del st.session_state[key]  # Remove only displayed data, not authentication
-
         st.rerun()  # ✅ Force Streamlit to refresh the UI
 
     # ✅ Restore original printing format for channel info
@@ -218,78 +217,21 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
         st.write("### Top URLs")
         st.data_editor(df_urls.head(25))
         
-    # Function to ensure a continuous date range with 0s
-    def format_vo_time_series(df):
-        df = df.copy()
-        df.index = pd.to_datetime(df.index)  # Ensure index is datetime
-
-        # ✅ Create full date range from the first to last message date
-        full_date_range = pd.date_range(start=df.index.min(), end=df.index.max(), freq='D')
-        df = df.reindex(full_date_range, fill_value=0).reset_index()
-        df.columns = ['Date'] + list(df.columns[1:])  # Rename first column to 'Date'
-
-        # ✅ Format as "Jan '24"
-        df['Date Label'] = df['Date'].dt.strftime("%b '%y")
-        return df
-
-    # Function to format VoT with correct start dates and filled gaps
-    def format_vo_time_series(df, freq="D"):
-        df = df.copy()
-
-        # ✅ Ensure DataFrame is not empty
-        if df.empty or df.shape[1] < 2:
-            st.warning(f"No data available for {freq} VoT.")
-            return pd.DataFrame()
-
-        # ✅ Ensure datetime index
-        if not isinstance(df.index, pd.DatetimeIndex):
-            df[df.columns[0]] = pd.to_datetime(df[df.columns[0]])  # Ensure datetime
-            df = df.set_index(df.columns[0])
-
-        # ✅ Determine correct start date
-        min_date = df.index.min()
-        max_date = df.index.max()
-
-        if freq == "MS":  # ✅ Monthly Fix: Ensure first month appears
-            min_date = pd.Timestamp(year=min_date.year, month=min_date.month, day=1)  # Force first month
-
-        elif freq == "W":  # ✅ Weekly Fix: Align to first Monday
-            min_date = min_date - pd.DateOffset(days=min_date.weekday())
-
-        # ✅ Generate full range with zero-filling
-        full_date_range = pd.date_range(start=min_date, end=max_date, freq=freq)
-        df = df.reindex(full_date_range, fill_value=0)
-
-        # ✅ Format labels for better x-axis readability
-        if freq == "MS":
-            df["Date Label"] = df.index.strftime("%b '%y")  # Ex: Dec '24, Jan '25
-        elif freq == "W":
-            df["Date Label"] = df.index.strftime("%d %b '%y")  # Ex: 04 Dec '23
-
-        return df.reset_index(names=["Date"])
-
-    # ✅ Display Daily Volume
+    # ✅ Show Volume Over Time Charts
     if "daily_volume" in st.session_state:
         st.subheader("📊 Daily Message Volume")
-        df_daily = format_vo_time_series(pd.DataFrame(st.session_state.daily_volume), freq="D")
-        if not df_daily.empty:
-            st.line_chart(df_daily.set_index("Date")["Total"])
+        df_daily = pd.DataFrame(st.session_state.daily_volume)
+        st.line_chart(df_daily.set_index("Date")["Total"])
 
-    # ✅ Display Weekly Volume (Fix: Start at first Monday)
     if "weekly_volume" in st.session_state:
         st.subheader("📊 Weekly Message Volume")
-        df_weekly = format_vo_time_series(pd.DataFrame(st.session_state.weekly_volume), freq="W-MON")
-        if not df_weekly.empty:
-            st.line_chart(df_weekly.set_index("Date")["Total"])
+        df_weekly = pd.DataFrame(st.session_state.weekly_volume)
+        st.line_chart(df_weekly.set_index("Week")["Total"])
 
-    # ✅ Display Monthly Volume (Fix: Start at the first month with messages)
     if "monthly_volume" in st.session_state:
         st.subheader("📊 Monthly Message Volume")
-        df_monthly = format_vo_time_series(pd.DataFrame(st.session_state.monthly_volume), freq="MS")
-
-        if not df_monthly.empty:
-            df_monthly = df_monthly.set_index("Date")["Total"]
-            st.line_chart(df_monthly)  # ✅ Ensure correct x-axis display
+        df_monthly = pd.DataFrame(st.session_state.monthly_volume)
+        st.line_chart(df_monthly.set_index("Year-Month")["Total"])
         
     # CSV Download
     if "messages_data" in st.session_state and st.session_state.messages_data is not None:
@@ -328,9 +270,9 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
             df_top_urls.to_excel(writer, sheet_name="Top 25 Shared URLs", index=False)
             df_forward_counts.to_excel(writer, sheet_name="Forward Counts", index=False)
             df_top_hashtags.to_excel(writer, sheet_name="Top 25 Hashtags", index=False)
-            df_daily_volume.to_excel(writer, sheet_name="Daily Volume", index=True)
-            df_weekly_volume.to_excel(writer, sheet_name="Weekly Volume", index=True)
-            df_monthly_volume.to_excel(writer, sheet_name="Monthly Volume", index=True)
+            df_daily_volume.to_excel(writer, sheet_name="Daily Volume", index=False)
+            df_weekly_volume.to_excel(writer, sheet_name="Weekly Volume", index=False)
+            df_monthly_volume.to_excel(writer, sheet_name="Monthly Volume", index=False)
         output_xlsx.seek(0)
 
         st.download_button(

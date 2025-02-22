@@ -217,8 +217,7 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
         st.write("### Top Hashtags")
         st.data_editor(df_hashtags.head(25))
         
-        
-        
+
     # ✅ Define color palette
     COLOR_PALETTE = ["#C7074D", "#B4B2B1", "#4C4193", "#0068B2", "#E76863", "#5C6771"]
 
@@ -243,17 +242,13 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
 
         if show_total:
             # ✅ Sum all columns to show aggregated total
-            df = df.sum(axis=1).to_frame(name="Total")
+            df["Total"] = df.iloc[:, 1:].sum(axis=1)  # Sum all channels
+            df = df[["index", "Total"]].rename(columns={"index": index_col})
             colors = ["#C7074D"]  # ✅ Use only one color for total view
         else:
-            # ✅ Check number of lines and adjust colors accordingly
-            num_lines = df.shape[1]
-            if num_lines >= 7:
-                st.warning("Too many categories! Showing only the total aggregated volume.")
-                df = df.sum(axis=1).to_frame(name="Total")
-                colors = ["#C7074D"]  # ✅ Use only one color
-            else:
-                colors = COLOR_PALETTE[:num_lines]  # ✅ Use only needed colors
+            # ✅ Ensure the number of colors matches the number of columns
+            num_lines = df.shape[1] - 1  # Excluding the index column
+            colors = COLOR_PALETTE[:num_lines] if num_lines <= len(COLOR_PALETTE) else None  # Avoid mismatch
 
         # ✅ Plot the chart with dynamically assigned colors
         st.line_chart(df.set_index(index_col), color=colors)

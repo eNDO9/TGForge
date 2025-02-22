@@ -188,8 +188,8 @@ async def fetch_messages(client, channel_list):
     df_copy = df_copy.dropna(subset=["Message DateTime (UTC)"])  # Drop any rows that still have NaT
 
     # ✅ Generate volume over time
-    daily_volume = generate_volume_by_period(df_copy, "D")
-    weekly_volume = generate_volume_by_period(df_copy, "W")
-    monthly_volume = generate_volume_by_period(df_copy, "M")
+    daily_volume = generate_volume_by_period(df_copy)
+    weekly_volume = generate_volume_by_period(df_copy)
+    monthly_volume = generate_volume_by_period(df_copy)
 
     return df, top_hashtags_df, top_urls_df, top_domains_df, forward_counts_df, daily_volume, weekly_volume, monthly_volume

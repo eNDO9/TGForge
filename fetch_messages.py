@@ -152,17 +152,20 @@ async def fetch_messages(client, channel_list):
     def generate_weekly_volume(df):
         df["Message DateTime (UTC)"] = pd.to_datetime(df["Message DateTime (UTC)"])
         weekly_counts = df.groupby(df["Message DateTime (UTC)"].dt.to_period("W-MON")).size()
-        full_range = pd.period_range(start=weekly_counts.index.min(), end=weekly_counts.index.max(), freq="W-MON")
+        # ✅ Fix: Convert period format to actual first date of the week
+        weekly_counts.index = weekly_counts.index.to_timestamp()
+        full_range = pd.date_range(start=weekly_counts.index.min(), end=weekly_counts.index.max(), freq="W-MON")
         weekly_counts = weekly_counts.reindex(full_range, fill_value=0)
         return weekly_counts.reset_index().rename(columns={"index": "Week", 0: "Total"})
 
     def generate_monthly_volume(df):
         df["Message DateTime (UTC)"] = pd.to_datetime(df["Message DateTime (UTC)"])
         monthly_counts = df.groupby(df["Message DateTime (UTC)"].dt.to_period("M")).size()
-        full_range = pd.period_range(start=monthly_counts.index.min(), end=monthly_counts.index.max(), freq="M")
+        # ✅ Fix: Convert period format to first day of the month
+        monthly_counts.index = monthly_counts.index.to_timestamp()
+        full_range = pd.date_range(start=monthly_counts.index.min(), end=monthly_counts.index.max(), freq="MS")
         monthly_counts = monthly_counts.reindex(full_range, fill_value=0)
         return monthly_counts.reset_index().rename(columns={"index": "Year-Month", 0: "Total"})
-
 
     # Compute top analytics
     top_domains_df = process_domains(df)

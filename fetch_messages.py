@@ -149,27 +149,26 @@ async def fetch_messages(client, channel_list):
         if period == "D":  
             first_period_start = first_message_date  # No adjustment needed for daily
         elif period == "W":  
-            first_period_start = first_message_date - pd.offsets.Week(weekday=0)  # Start at the beginning of the first full week (Monday)
+            first_period_start = first_message_date - pd.DateOffset(days=first_message_date.weekday())  # Start of the first full week (Monday)
         elif period == "M":  
-            first_period_start = first_message_date.replace(day=1)  # Start at the beginning of the first full month
+            first_period_start = first_message_date.replace(day=1)  # Start of the first full month
 
-        # ✅ Generate the full date range to ensure no missing periods
-        full_date_range = pd.date_range(start=first_period_start, end=last_message_date, freq=period_to_freq(period))
-
-        # ✅ Group by the period and count messages per channel
+        # ✅ Ensure we aggregate first, then expand missing periods
         volume = df.groupby([df["Message DateTime (UTC)"].dt.to_period(period), "Channel"]).size().unstack(fill_value=0)
 
         # ✅ Add a 'Total' column summing across all channels
         volume["Total"] = volume.sum(axis=1)
 
-        # ✅ Convert the period index back to timestamps for proper alignment
+        # ✅ Convert period to timestamps AFTER aggregation
         volume.index = volume.index.to_timestamp()
 
-        # ✅ Reindex to ensure all periods are represented (fill missing with 0)
+        # ✅ Create a complete range from first_period_start to last_message_date
+        full_date_range = pd.date_range(start=first_period_start, end=last_message_date, freq=period_to_freq(period))
+
+        # ✅ Reindex AFTER aggregation to ensure all periods are present
         volume = volume.reindex(full_date_range, fill_value=0)
 
         return volume
-
 
     
     # ✅ Process Domains from URLs

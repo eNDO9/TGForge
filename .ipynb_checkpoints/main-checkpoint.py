@@ -243,7 +243,7 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
         if show_total:
             # ✅ Sum all columns to show aggregated total
             df["Total"] = df.iloc[:, 1:].sum(axis=1)  # Sum all channels
-            df = df[["index", "Total"]].rename(columns={"index": index_col})
+            df = df[[index_col, "Total"]]
             colors = ["#C7074D"]  # ✅ Use only one color for total view
         else:
             # ✅ Ensure the number of colors matches the number of columns

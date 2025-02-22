@@ -217,24 +217,52 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
         st.write("### Top Hashtags")
         st.data_editor(df_hashtags.head(25))
         
-    # ✅ Show Volume Over Time Charts
+        
+        
+    # ✅ Define color palette
+    COLOR_PALETTE = ["#C7074D", "#B4B2B1", "#4C4193", "#0068B2", "#E76863", "#5C6771"]
+
+    def plot_vot_chart(df, index_col, title):
+        """Plots a line chart, dynamically adjusting colors & allowing toggle for aggregation."""
+        st.subheader(title)
+
+        if df.empty:
+            st.warning("No data available.")
+            return
+
+        df = df.set_index(index_col)
+
+        # ✅ Allow user to toggle between showing individual lines vs aggregated total
+        show_total = st.toggle(f"Show aggregated total for {title}", value=False)
+
+        if show_total:
+            # ✅ Sum all columns to show aggregated total
+            df = df.sum(axis=1).to_frame(name="Total")
+        else:
+            # ✅ Check number of lines and adjust colors accordingly
+            num_lines = df.shape[1]
+            if num_lines >= 7:
+                st.warning("Too many categories! Showing only the total aggregated volume.")
+                df = df.sum(axis=1).to_frame(name="Total")
+                colors = [COLOR_PALETTE[0]]  # ✅ Use only the first color
+            else:
+                colors = COLOR_PALETTE[:num_lines]  # ✅ Use only needed colors
+
+        # ✅ Plot the chart with dynamically assigned colors
+        st.line_chart(df, color=colors)
+        
+    # ✅ Show Volume Over Time Charts with Dynamic Colors & Toggle
     if "daily_volume" in st.session_state:
-        st.subheader("Daily Message Volume")
         df_daily = pd.DataFrame(st.session_state.daily_volume)
-        st.line_chart(data=df_daily.set_index("Date")["Total"], 
-                      color=["#C7074D", "#B4B2B1", "#4C4193", "#0068B2", "#E76863", "#5C6771"])
+        plot_vot_chart(df_daily, "Date", "Daily Message Volume")
 
     if "weekly_volume" in st.session_state:
-        st.subheader("Weekly Message Volume")
         df_weekly = pd.DataFrame(st.session_state.weekly_volume)
-        st.line_chart(data=df_weekly.set_index("Week")["Total"], 
-                      color=["#C7074D", "#B4B2B1", "#4C4193", "#0068B2", "#E76863", "#5C6771"])
+        plot_vot_chart(df_weekly, "Week", "Weekly Message Volume")
 
     if "monthly_volume" in st.session_state:
-        st.subheader("Monthly Message Volume")
         df_monthly = pd.DataFrame(st.session_state.monthly_volume)
-        st.line_chart(data=df_monthly.set_index("Year-Month")["Total"], 
-                      color=["#C7074D", "#B4B2B1", "#4C4193", "#0068B2", "#E76863", "#5C6771"])
+        plot_vot_chart(df_monthly, "Year-Month", "Monthly Message Volume")
         
     # CSV Download
     if "messages_data" in st.session_state and st.session_state.messages_data is not None:

@@ -128,51 +128,41 @@ async def fetch_messages(client, channel_list):
 
         return fwd_counts_df
     
-    def period_to_freq(period):
-        if period == "D":
-            return "D"  # Daily
-        elif period == "W":
-            return "W-MON"  # Weekly (Start on Monday)
-        elif period == "M":
-            return "MS"  # Month Start
-        else:
-            raise ValueError(f"Unsupported period: {period}")
-
-
-    def generate_volume_by_period(df, period):
+    def generate_daily_volume(df):
+        # Convert to datetime
         df["Message DateTime (UTC)"] = pd.to_datetime(df["Message DateTime (UTC)"])
+        # Extract date and count messages
+        daily_counts = df.groupby(df["Message DateTime (UTC)"].dt.date).size()
+        # Create a complete date range
+        full_range = pd.date_range(start=daily_counts.index.min(), end=daily_counts.index.max(), freq='D')
+        # Reindex to ensure missing days are filled with 0
+        daily_counts = daily_counts.reindex(full_range, fill_value=0)
+        # Convert index to date format
+        daily_counts.index = daily_counts.index.date
+        return daily_counts
 
-        # ✅ Identify the first and last message date
-        first_message_date = df["Message DateTime (UTC)"].min()
-        last_message_date = df["Message DateTime (UTC)"].max()
+    def generate_weekly_volume(df):
+        # Convert to datetime
+        df["Message DateTime (UTC)"] = pd.to_datetime(df["Message DateTime (UTC)"])
+        # Extract week starting on Monday
+        weekly_counts = df.groupby(df["Message DateTime (UTC)"].dt.to_period("W-MON")).size()
+        # Create a complete week range
+        full_range = pd.period_range(start=weekly_counts.index.min(), end=weekly_counts.index.max(), freq='W-MON')
+        # Reindex to ensure missing weeks are filled with 0
+        weekly_counts = weekly_counts.reindex(full_range, fill_value=0)
+        return weekly_counts
 
-        # ✅ Adjust first date to ensure the full first period is captured
-        if period == "D":  
-            first_period_start = first_message_date  # No adjustment needed for daily
-        elif period == "W":  
-            first_period_start = first_message_date - pd.DateOffset(days=first_message_date.weekday())  # Move to Monday of that week
-        elif period == "M":  
-            first_period_start = first_message_date.replace(day=1)  # Start at the beginning of the first full month
+    def generate_monthly_volume(df):
+        # Convert to datetime
+        df["Message DateTime (UTC)"] = pd.to_datetime(df["Message DateTime (UTC)"])
+        # Extract year-month
+        monthly_counts = df.groupby(df["Message DateTime (UTC)"].dt.to_period("M")).size()
+        # Create a complete month range from the first message month
+        full_range = pd.period_range(start=monthly_counts.index.min(), end=monthly_counts.index.max(), freq='M')
+        # Reindex to ensure missing months are filled with 0
+        monthly_counts = monthly_counts.reindex(full_range, fill_value=0)
+        return monthly_counts
 
-        # ✅ Generate the full date range
-        full_date_range = pd.date_range(start=first_period_start, end=last_message_date, freq=period_to_freq(period))
-
-        # ✅ Group by the period and count messages per channel
-        volume = df.groupby([df["Message DateTime (UTC)"].dt.to_period(period), "Channel"]).size().unstack(fill_value=0)
-
-        # ✅ Add a 'Total' column summing across all channels
-        volume["Total"] = volume.sum(axis=1)
-
-        # ✅ Convert the period index back to timestamps
-        volume.index = volume.index.to_timestamp()
-
-        # ✅ Ensure we don’t wipe out real data by filling missing values before reindexing
-        volume = volume.reindex(full_date_range, method='ffill').fillna(0)
-
-        return volume
-
-
-    
     # ✅ Process Domains from URLs
     def process_domains(df):
         df["URLs Shared"] = df["URLs Shared"].apply(lambda x: x if isinstance(x, list) else [])

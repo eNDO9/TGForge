@@ -20,7 +20,7 @@ else:
     asyncio.set_event_loop(st.session_state.event_loop)  # ✅ Keep the same event loop
 
 # --- Streamlit UI ---
-st.title("TGForge - MADE BY NATHAN")
+st.title("TGForge")
 
 # Ensure session state variables are initialized
 if "auth_step" not in st.session_state:
@@ -205,31 +205,31 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
         st.write("### Top Domains")
         st.data_editor(pd.DataFrame(st.session_state.top_domains).head(25))
 
-    # ✅ Show first 25 rows of top hashtags
-    if "top_hashtags" in st.session_state and st.session_state.top_hashtags is not None:
-        df_hashtags = pd.DataFrame(st.session_state.top_hashtags)
-        st.write("### Top Hashtags")
-        st.data_editor(df_hashtags.head(25))
-
     # ✅ Show first 25 rows of top URLs
     if "top_urls" in st.session_state and st.session_state.top_urls is not None:
         df_urls = pd.DataFrame(st.session_state.top_urls)
         st.write("### Top URLs")
         st.data_editor(df_urls.head(25))
         
+    # ✅ Show first 25 rows of top hashtags
+    if "top_hashtags" in st.session_state and st.session_state.top_hashtags is not None:
+        df_hashtags = pd.DataFrame(st.session_state.top_hashtags)
+        st.write("### Top Hashtags")
+        st.data_editor(df_hashtags.head(25))
+        
     # ✅ Show Volume Over Time Charts
     if "daily_volume" in st.session_state:
-        st.subheader("📊 Daily Message Volume")
+        st.subheader("Daily Message Volume")
         df_daily = pd.DataFrame(st.session_state.daily_volume)
         st.line_chart(df_daily.set_index("Date")["Total"])
 
     if "weekly_volume" in st.session_state:
-        st.subheader("📊 Weekly Message Volume")
+        st.subheader("Weekly Message Volume")
         df_weekly = pd.DataFrame(st.session_state.weekly_volume)
         st.line_chart(df_weekly.set_index("Week")["Total"])
 
     if "monthly_volume" in st.session_state:
-        st.subheader("📊 Monthly Message Volume")
+        st.subheader("Monthly Message Volume")
         df_monthly = pd.DataFrame(st.session_state.monthly_volume)
         st.line_chart(df_monthly.set_index("Year-Month")["Total"])
         

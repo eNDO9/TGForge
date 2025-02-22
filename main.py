@@ -221,8 +221,9 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
         
     # ✅ Define color palette
     COLOR_PALETTE = ["#C7074D", "#B4B2B1", "#4C4193", "#0068B2", "#E76863", "#5C6771"]
-    
-    def plot_vot_chart(df, index_col, title):
+
+    def plot_vot_chart(df, index_col, title, freq="D"):
+        """Plots a line chart, ensuring missing dates are filled with 0s and colors adjust dynamically."""
         st.subheader(title)
 
         if df.empty:
@@ -230,6 +231,12 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
             return
 
         df = df.set_index(index_col)
+
+        # ✅ Generate a full date range (Daily, Weekly, Monthly)
+        full_range = pd.date_range(start=df.index.min(), end=df.index.max(), freq=freq)
+        df = df.reindex(full_range, fill_value=0)  # ✅ Fill missing dates with 0s
+        df.index.name = index_col  # ✅ Rename index to match expected format
+        df.reset_index(inplace=True)
 
         # ✅ Allow user to toggle between showing individual lines vs aggregated total
         show_total = st.toggle(f"Show aggregated total for {title}", value=False)
@@ -249,20 +256,21 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
                 colors = COLOR_PALETTE[:num_lines]  # ✅ Use only needed colors
 
         # ✅ Plot the chart with dynamically assigned colors
-        st.line_chart(df, color=colors)
+        st.line_chart(df.set_index(index_col), color=colors)
 
-    # ✅ Show Volume Over Time Charts with Dynamic Colors & Toggle
+    # ✅ Show Volume Over Time Charts with Missing Dates Filled
     if "daily_volume" in st.session_state:
         df_daily = pd.DataFrame(st.session_state.daily_volume)
-        plot_vot_chart(df_daily, "Date", "📊 Daily Message Volume")
+        plot_vot_chart(df_daily, "Date", "📊 Daily Message Volume", freq="D")
 
     if "weekly_volume" in st.session_state:
         df_weekly = pd.DataFrame(st.session_state.weekly_volume)
-        plot_vot_chart(df_weekly, "Week", "📆 Weekly Message Volume")
+        plot_vot_chart(df_weekly, "Week", "📆 Weekly Message Volume", freq="W-MON")
 
     if "monthly_volume" in st.session_state:
         df_monthly = pd.DataFrame(st.session_state.monthly_volume)
-        plot_vot_chart(df_monthly, "Year-Month", "📅 Monthly Message Volume")
+        plot_vot_chart(df_monthly, "Year-Month", "📅 Monthly Message Volume", freq="MS")
+
         
     # CSV Download
     if "messages_data" in st.session_state and st.session_state.messages_data is not None:

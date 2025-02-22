@@ -223,7 +223,6 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
     COLOR_PALETTE = ["#C7074D", "#B4B2B1", "#4C4193", "#0068B2", "#E76863", "#5C6771"]
     
     def plot_vot_chart(df, index_col, title):
-    """Plots a line chart, dynamically adjusting colors & allowing toggle for aggregation."""
         st.subheader(title)
 
         if df.empty:

@@ -181,7 +181,7 @@ async def fetch_messages(client, channel_list):
         # ✅ Pivot to make each channel a separate column
         weekly_counts_pivot = weekly_counts.pivot(index="Week", columns="Channel", values="Total").fillna(0)
         
-        st.write("DEBUG: Weekly Volume Before Returning:")
+        st.write("DEBUG: weekly_counts_pivot before returning:")
         st.write(weekly_counts_pivot)
 
         return weekly_counts_pivot.reset_index()
@@ -219,6 +219,8 @@ async def fetch_messages(client, channel_list):
     daily_volume = generate_daily_volume(df)
     weekly_volume = generate_weekly_volume(df)
     monthly_volume = generate_monthly_volume(df)
-
+    
+    st.write("DEBUG: Weekly Volume Before Returning:")
+    st.write(weekly_volume)
 
     return df, top_hashtags_df, top_urls_df, top_domains_df, forward_counts_df, daily_volume, weekly_volume, monthly_volume

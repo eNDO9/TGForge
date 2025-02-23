@@ -180,6 +180,9 @@ async def fetch_messages(client, channel_list):
 
         # ✅ Pivot to make each channel a separate column
         weekly_counts_pivot = weekly_counts.pivot(index="Week", columns="Channel", values="Total").fillna(0)
+        
+        st.write("DEBUG: Weekly Volume Before Returning:")
+        st.write(weekly_counts_pivot)
 
         return weekly_counts_pivot.reset_index()
 

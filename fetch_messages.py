@@ -220,7 +220,7 @@ async def fetch_messages(client, channel_list):
     weekly_volume = generate_weekly_volume(df)
     monthly_volume = generate_monthly_volume(df)
     
-    st.text("DEBUG: Weekly Volume Before Returning:")
-    st.text(weekly_volume)
+    #st.text("DEBUG: Weekly Volume Before Returning:")
+    #st.text(weekly_volume)
 
     return df, top_hashtags_df, top_urls_df, top_domains_df, forward_counts_df, daily_volume, weekly_volume, monthly_volume

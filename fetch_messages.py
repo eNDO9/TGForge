@@ -183,6 +183,8 @@ async def fetch_messages(client, channel_list):
         
         st.text("DEBUG: weekly_counts_pivot before returning:")
         st.text(weekly_counts_pivot)
+        
+        weekly_counts_pivot['Week'] = pd.to_datetime(weekly_counts_pivot['Week'])
 
         return weekly_counts_pivot.reset_index()
 

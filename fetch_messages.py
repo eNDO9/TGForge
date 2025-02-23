@@ -182,7 +182,7 @@ async def fetch_messages(client, channel_list):
         weekly_counts_pivot = weekly_counts.pivot(index="Week", columns="Channel", values="Total").fillna(0)
         
         st.text("DEBUG: weekly_counts_pivot before returning:")
-        st.dataframe(weekly_counts_pivot)
+        st.text(weekly_counts_pivot)
 
         return weekly_counts_pivot.reset_index()
 

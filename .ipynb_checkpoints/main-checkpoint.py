@@ -261,14 +261,13 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
     if "weekly_volume" in st.session_state:
         df_weekly = pd.DataFrame(st.session_state.weekly_volume)
         st.text("DEBUG: st.session_state.weekly_volume")
-        st.text(st.session_state.weekly_volume)
+        st.text(df_weekly)
         plot_vot_chart(df_weekly, "Week", "📆 Weekly Message Volume", freq="W-MON")
 
     if "monthly_volume" in st.session_state:
         df_monthly = pd.DataFrame(st.session_state.monthly_volume)
         plot_vot_chart(df_monthly, "Year-Month", "📅 Monthly Message Volume", freq="MS")
-
-        
+     
     # CSV Download
     if "messages_data" in st.session_state and st.session_state.messages_data is not None:
         df_messages = pd.DataFrame(st.session_state.messages_data)

@@ -6,7 +6,6 @@ from collections import Counter
 from urllib.parse import urlparse
 from telethon.errors import FloodWaitError, RpcCallFailError
 from telethon.tl.types import PeerUser
-import streamlit as st #for debugging
 
 
 async def fetch_messages(client, channel_list):

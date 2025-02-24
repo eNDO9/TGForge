@@ -108,8 +108,13 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
     # For Messages and Forwards, add optional date range filters
     if fetch_option in ["Messages", "Forwards"]:
         st.subheader("Optional: Set Date Range")
-        start_date = st.date_input("Start Date")
-        end_date = st.date_input("End Date")
+        use_date_range = st.checkbox("Filter by Date Range", value=False)
+        if use_date_range:
+            start_date = st.date_input("Start Date")
+            end_date = st.date_input("End Date")
+        else:
+            start_date = None
+            end_date = None
     else:
         start_date = end_date = None
 

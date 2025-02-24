@@ -3,6 +3,15 @@ import time
 import streamlit as st
 from telethon.errors import FloodWaitError, RpcCallFailError
 
+def get_filter_date(message):
+    """Return the forwarded date if available, otherwise the message date."""
+    if message.forward and message.forward.date:
+        return message.forward.date.replace(tzinfo=None)
+    elif message.date:
+        return message.date.replace(tzinfo=None)
+    else:
+        return None
+
 async def fetch_forwards(client, channel_list, start_date=None, end_date=None):
     """Fetches forwarded messages from a list of channels, with optional date range filtering."""
     all_messages_data = []
@@ -23,36 +32,27 @@ async def fetch_forwards(client, channel_list, start_date=None, end_date=None):
                     if not messages:
                         break
 
-                    stop_fetching = False
                     # Process each message in this batch
                     for message in messages:
                         # Only consider forwarded messages
                         if not message.forward:
                             continue
 
-                        # Determine the filter date: if the forwarded message has its own date, use that;
-                        # otherwise, fallback to the message's date.
-                        if message.forward and message.forward.date:
-                            filter_date = message.forward.date.replace(tzinfo=None)
-                        else:
-                            filter_date = message.date.replace(tzinfo=None) if message.date else None
+                        filter_date = get_filter_date(message)
+                        if not filter_date:
+                            continue
 
-                        # If a start_date is provided and this message is older, signal to stop fetching further.
-                        if start_date or end_date:
-                            total_messages = [
-                                m for m in total_messages 
-                                if (not start_date or (get_filter_date(m) and get_filter_date(m).date() >= start_date)) and 
-                                   (not end_date or (get_filter_date(m) and get_filter_date(m).date() <= end_date))
-                            ]
-
-                        # Only include messages within the specified range
-                        if ((not start_date or (filter_date and filter_date.date() >= start_date)) and 
-                            (not end_date or (filter_date and filter_date.date() <= end_date))):
+                        # Instead of breaking early, only add messages that are within range.
+                        if ((not start_date or filter_date.date() >= start_date) and 
+                            (not end_date or filter_date.date() <= end_date)):
                             total_messages.append(message)
 
-                    if stop_fetching:
-                        break
-                        
+                    # After processing the batch, if the last message is entirely older than the start_date, break.
+                    if start_date:
+                        last_filter_date = get_filter_date(messages[-1])
+                        if last_filter_date and last_filter_date.date() < start_date:
+                            break
+
                     offset_id = messages[-1].id if messages else offset_id
                     time.sleep(1)
 
@@ -68,7 +68,7 @@ async def fetch_forwards(client, channel_list, start_date=None, end_date=None):
                     print(f"Telegram internal issue: {e}. Retrying after a delay...")
                     time.sleep(5)
 
-            # Process messages
+            # Process message
             messages_data = []
             for message in total_messages:
                 if message.forward:

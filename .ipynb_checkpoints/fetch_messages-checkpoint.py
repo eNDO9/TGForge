@@ -17,30 +17,31 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None):
         offset_id = 0
         total_messages = []
 
-        while True:
-            messages = await client.get_messages(channel, limit=limit, offset_id=offset_id)
-            if not messages:
-                break
-
-            stop_fetching = False  # Flag to stop if we go before the start_date
-            for message in messages:
-                message_datetime = message.date.replace(tzinfo=None) if message.date else None
-                
-                # If we've reached messages older than our start_date, break out of the loop.
-                if start_date and message_datetime and message_datetime.date() < start_date:
-                    stop_fetching = True
+        try:
+            while True:
+                messages = await client.get_messages(channel, limit=limit, offset_id=offset_id)
+                if not messages:
                     break
 
-                # Only add messages within the specified range
-                if ((not start_date or (message_datetime and message_datetime.date() >= start_date)) and 
-                    (not end_date or (message_datetime and message_datetime.date() <= end_date))):
-                    total_messages.append(message)
+                stop_fetching = False  # Flag to stop if we go before the start_date
+                for message in messages:
+                    message_datetime = message.date.replace(tzinfo=None) if message.date else None
+                    
+                    # If we've reached messages older than our start_date, break out of the loop.
+                    if start_date and message_datetime and message_datetime.date() < start_date:
+                        stop_fetching = True
+                        break
 
-            if stop_fetching:
-                break
+                    # Only add messages within the specified range
+                    if ((not start_date or (message_datetime and message_datetime.date() >= start_date)) and 
+                        (not end_date or (message_datetime and message_datetime.date() <= end_date))):
+                        total_messages.append(message)
 
-            offset_id = messages[-1].id if messages else offset_id
-            time.sleep(1)
+                if stop_fetching:
+                    break
+
+                offset_id = messages[-1].id if messages else offset_id
+                time.sleep(1)
 
             # Process messages
             messages_data = []

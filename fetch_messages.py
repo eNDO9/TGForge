@@ -88,6 +88,7 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None):
                     "Views": message.views if message.views else None,
                     "Forwards": message.forwards if message.forwards else None,
                     "Replies": message.replies.replies if message.replies else "No Replies",
+                    "Grouped ID": str(message.grouped_id) if message.grouped_id else "Not Available"
                 }
 
                 messages_data.append(message_data)
@@ -100,7 +101,11 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None):
 
     # Convert to DataFrame
     df = pd.DataFrame(all_messages_data)
-
+    
+    # Deduplicate based on Grouped ID
+    dedup_df = df[df["Grouped ID"] != "Not Available"].drop_duplicates(subset=["Grouped ID"], keep="first")
+    df = pd.concat([df[df["Grouped ID"] == "Not Available"], dedup_df]).sort_values(by=["Channel", "Message DateTime (UTC)"]).reset_index(drop=True)
+    
     # Generate Analytics (Hashtags, URLs, Volume Trends)
     def process_hashtags(df):
         df["Hashtags"] = df["Hashtags"].apply(lambda x: x if isinstance(x, list) else [])

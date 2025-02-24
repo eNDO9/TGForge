@@ -51,6 +51,7 @@ async def fetch_messages(client, channel_list):
                 hashtags = [tag for tag in message.text.split() if tag.startswith("#")] if message.text else []
                 reactions = sum([reaction.count for reaction in message.reactions.results]) if message.reactions else 0
                 geo_location = f"{message.geo.lat}, {message.geo.long}" if message.geo else "None"
+                
 
                 original_username = "Not Available"
                 if is_forward:
@@ -184,7 +185,6 @@ async def fetch_messages(client, channel_list):
 
         return weekly_counts_pivot.reset_index()
 
-
     def generate_monthly_volume(df):
         """Generates monthly message counts per channel."""
         df["Message DateTime (UTC)"] = pd.to_datetime(df["Message DateTime (UTC)"])
@@ -217,8 +217,6 @@ async def fetch_messages(client, channel_list):
     daily_volume = generate_daily_volume(df)
     weekly_volume = generate_weekly_volume(df)
     monthly_volume = generate_monthly_volume(df)
-    
-    #st.text("DEBUG: Weekly Volume Before Returning:")
-    #st.text(weekly_volume)
 
     return df, top_hashtags_df, top_urls_df, top_domains_df, forward_counts_df, daily_volume, weekly_volume, monthly_volume
+

@@ -176,11 +176,12 @@ async def fetch_messages(client, channel_list):
                                    end=weekly_counts["Week"].max(), 
                                    freq="W-MON")
 
-        # Pivot to make each channel a separate column
+        # ✅ Create a full DataFrame with all channels
+        full_weeks_df = pd.DataFrame({"Week": full_range})
+        weekly_counts["Week"] = pd.to_datetime(weekly_counts["Week"])
+
+        # ✅ Pivot to make each channel a separate column
         weekly_counts_pivot = weekly_counts.pivot(index="Week", columns="Channel", values="Total").fillna(0)
-        # Ensure all weeks in the full range are represented
-        weekly_counts_pivot = weekly_counts_pivot.reindex(full_range, fill_value=0)
-        weekly_counts_pivot.index.name = "Week"
 
         return weekly_counts_pivot.reset_index()
     

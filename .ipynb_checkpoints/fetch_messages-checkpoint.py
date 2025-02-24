@@ -180,10 +180,6 @@ async def fetch_messages(client, channel_list):
         weekly_counts_pivot = weekly_counts.pivot(index="Week", columns="Channel", values="Total").fillna(0)
         weekly_counts_pivot = full_weeks_df.merge(weekly_counts_pivot, on="Week", how="left").fillna(0)
 
-        # 🔍 Debugging: Show DataFrame in Streamlit
-        st.text("DEBUG: weekly_counts_pivot before returning:")
-        st.dataframe(weekly_counts_pivot)
-
         return weekly_counts_pivot.reset_index()
     
 

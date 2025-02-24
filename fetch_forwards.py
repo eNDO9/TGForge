@@ -3,15 +3,6 @@ import time
 import streamlit as st
 from telethon.errors import FloodWaitError, RpcCallFailError
 
-def get_filter_date(message):
-    """Return the forwarded date if available, otherwise the message date."""
-    if message.forward and message.forward.date:
-        return message.forward.date.replace(tzinfo=None)
-    elif message.date:
-        return message.date.replace(tzinfo=None)
-    else:
-        return None
-
 async def fetch_forwards(client, channel_list, start_date=None, end_date=None):
     """Fetches forwarded messages from a list of channels, with optional date range filtering."""
     all_messages_data = []
@@ -56,13 +47,6 @@ async def fetch_forwards(client, channel_list, start_date=None, end_date=None):
                 # Check if a cancel flag was set:
                 if st.session_state.get("cancel_fetch", False):
                     break
-
-                except FloodWaitError as e:
-                    print(f"Flood wait error occurred. Waiting for {e.seconds} seconds...")
-                    time.sleep(e.seconds + 1)
-                except RpcCallFailError as e:
-                    print(f"Telegram internal issue: {e}. Retrying after a delay...")
-                    time.sleep(5)
 
             # Process messages
             messages_data = []

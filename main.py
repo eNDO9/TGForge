@@ -306,21 +306,17 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
             mime="text/csv",
         )
 
-    # ✅ Fix XLSX Download
-    if (
-        "messages_data" in st.session_state and "top_hashtags" in st.session_state
-        and "top_urls" in st.session_state and "top_domains" in st.session_state
-        and "forward_counts" in st.session_state and "daily_volume" in st.session_state
-        and "weekly_volume" in st.session_state and "monthly_volume" in st.session_state
-    ):
-        df_messages = pd.DataFrame(st.session_state.messages_data).nlargest(50, "Views")  # ✅ Top 50 most viewed messages
-        df_top_domains = pd.DataFrame(st.session_state.top_domains).head(25)  # ✅ Top 25 most shared domains
-        df_top_urls = pd.DataFrame(st.session_state.top_urls).head(25)  # ✅ Top 25 most shared URLs
-        df_forward_counts = pd.DataFrame(st.session_state.forward_counts)  # ✅ Forward counts
-        df_top_hashtags = pd.DataFrame(st.session_state.top_hashtags).head(25)  # ✅ Top 25 hashtags
-        df_daily_volume = pd.DataFrame(st.session_state.daily_volume)  # ✅ Daily volume
-        df_weekly_volume = pd.DataFrame(st.session_state.weekly_volume)  # ✅ Weekly volume
-        df_monthly_volume = pd.DataFrame(st.session_state.monthly_volume)  # ✅ Monthly volume
+    # XLSX Download
+    if "messages_data" in st.session_state and st.session_state.messages_data is not None:
+        # Build XLSX for message analytics
+        df_messages = pd.DataFrame(st.session_state.messages_data).nlargest(50, "Views")  # Top 50 most viewed messages
+        df_top_domains = pd.DataFrame(st.session_state.top_domains).head(25)               # Top 25 shared domains
+        df_top_urls = pd.DataFrame(st.session_state.top_urls).head(25)                     # Top 25 shared URLs
+        df_forward_counts = pd.DataFrame(st.session_state.forward_counts)                # Forward counts
+        df_top_hashtags = pd.DataFrame(st.session_state.top_hashtags).head(25)             # Top 25 hashtags
+        df_daily_volume = pd.DataFrame(st.session_state.daily_volume)                    # Daily volume
+        df_weekly_volume = pd.DataFrame(st.session_state.weekly_volume)                  # Weekly volume
+        df_monthly_volume = pd.DataFrame(st.session_state.monthly_volume)                # Monthly volume
 
         output_xlsx = io.BytesIO()
         with pd.ExcelWriter(output_xlsx, engine="openpyxl") as writer:
@@ -338,5 +334,23 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
             "📥 Download Messages Data (Excel)",
             data=output_xlsx.getvalue(),
             file_name="messages_analysis.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+
+    elif "forwards_data" in st.session_state and st.session_state.forwards_data is not None:
+        # Build XLSX for forwards analytics
+        df_forwards = pd.DataFrame(st.session_state.forwards_data)
+        df_forward_counts = pd.DataFrame(st.session_state.forward_counts)
+
+        output_xlsx_forwards = io.BytesIO()
+        with pd.ExcelWriter(output_xlsx_forwards, engine="openpyxl") as writer:
+            df_forwards.to_excel(writer, sheet_name="Forwarded Messages", index=False)
+            df_forward_counts.to_excel(writer, sheet_name="Forward Counts", index=False)
+        output_xlsx_forwards.seek(0)
+
+        st.download_button(
+            "📥 Download Forwards Data (Excel)",
+            data=output_xlsx_forwards.getvalue(),
+            file_name="forwards_analysis.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )

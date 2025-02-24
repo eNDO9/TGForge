@@ -40,8 +40,13 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None):
                 if stop_fetching:
                     break
 
+                # Inside your while loop in fetch_messages.py:
                 offset_id = messages[-1].id if messages else offset_id
                 time.sleep(1)
+
+                # Check if a cancel flag was set:
+                if st.session_state.get("cancel_fetch", False):
+                    break
 
             # Process messages
             messages_data = []
@@ -130,10 +135,13 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None):
 
         return fwd_counts_df
 
-    # ✅ Process Domains from URLs
+    # Process domain counts
     def process_domains(df):
-        df["URLs Shared"] = df["URLs Shared"].apply(lambda x: x if isinstance(x, list) else [])
+        if "URLs Shared" not in df.columns:
+            # Return an empty DataFrame with the expected columns if no URLs are present.
+            return pd.DataFrame([], columns=["Domain", "Count"])
 
+        df["URLs Shared"] = df["URLs Shared"].apply(lambda x: x if isinstance(x, list) else [])
         domains_list = [
             re.sub(r"[^\w.-]+$", "", re.sub(r"^www\.", "", urlparse(url).netloc)).lower()
             for url in df["URLs Shared"].explode().dropna().tolist()
@@ -141,6 +149,7 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None):
         ]
         domains_counter = Counter(domains_list)
         return pd.DataFrame(domains_counter.items(), columns=["Domain", "Count"]).sort_values(by="Count", ascending=False).head(50)
+
     
     def generate_daily_volume(df, start_date=None, end_date=None):
         """Generates daily message counts per channel with date range control."""

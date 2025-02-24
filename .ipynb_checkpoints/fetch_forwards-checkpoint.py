@@ -15,51 +15,47 @@ def get_filter_date(message):
 async def fetch_forwards(client, channel_list, start_date=None, end_date=None):
     """Fetches forwarded messages from a list of channels, with optional date range filtering."""
     all_messages_data = []
-
+    
+    # from message fetching
     for channel_name in channel_list:
+        channel = await client.get_entity(channel_name)
+        offset_id = 0
+        total_messages = []
+
         try:
-            print(f"Fetching data for channel: {channel_name}")
-            channel = await client.get_entity(channel_name)
-
-            limit = 1000
-            offset_id = 0
-            total_messages = []
-
             while True:
-                try:
-                    print(f"Fetching messages from {channel_name} with offset {offset_id}...")
-                    messages = await client.get_messages(channel, limit=limit, offset_id=offset_id)
-                    if not messages:
+                messages = await client.get_messages(channel, limit=limit, offset_id=offset_id)
+                if not messages:
+                    break
+
+                stop_fetching = False  # Flag to stop if we go before the start_date
+                for message in messages:
+                    # Only consider forwarded messages
+                    if not message.forward:
+                        continue
+                    
+                    message_datetime = message.date.replace(tzinfo=None) if message.date else None
+                    
+                    # If we've reached messages older than our start_date, break out of the loop.
+                    if start_date and message_datetime and message_datetime.date() < start_date:
+                        stop_fetching = True
                         break
 
-                    # Process each message in this batch
-                    for message in messages:
-                        # Only consider forwarded messages
-                        if not message.forward:
-                            continue
+                    # Only add messages within the specified range
+                    if ((not start_date or (message_datetime and message_datetime.date() >= start_date)) and 
+                        (not end_date or (message_datetime and message_datetime.date() <= end_date))):
+                        total_messages.append(message)
 
-                        filter_date = get_filter_date(message)
-                        if not filter_date:
-                            continue
+                if stop_fetching:
+                    break
 
-                        # Instead of breaking early, only add messages that are within range.
-                        if ((not start_date or filter_date.date() >= start_date) and 
-                            (not end_date or filter_date.date() <= end_date)):
-                            total_messages.append(message)
+                # Inside your while loop in fetch_messages.py:
+                offset_id = messages[-1].id if messages else offset_id
+                time.sleep(1)
 
-                    # After processing the batch, if the last message is entirely older than the start_date, break.
-                    if start_date:
-                        last_filter_date = get_filter_date(messages[-1])
-                        if last_filter_date and last_filter_date.date() < start_date:
-                            break
-
-                    offset_id = messages[-1].id if messages else offset_id
-                    time.sleep(1)
-
-                    # Check if a cancel flag was set:
-                    if st.session_state.get("cancel_fetch", False):
-                        print("Fetch cancelled by user.")
-                        break
+                # Check if a cancel flag was set:
+                if st.session_state.get("cancel_fetch", False):
+                    break
 
                 except FloodWaitError as e:
                     print(f"Flood wait error occurred. Waiting for {e.seconds} seconds...")
@@ -68,7 +64,7 @@ async def fetch_forwards(client, channel_list, start_date=None, end_date=None):
                     print(f"Telegram internal issue: {e}. Retrying after a delay...")
                     time.sleep(5)
 
-            # Process message
+            # Process messages
             messages_data = []
             for message in total_messages:
                 if message.forward:

@@ -102,12 +102,20 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None):
 
     # Generate Analytics (Hashtags, URLs, Volume Trends)
     def process_hashtags(df):
+        if "Hashtags" not in df.columns:
+            # Return an empty DataFrame with the expected columns if no URLs are present.
+            return pd.DataFrame([], columns=["Hashtag", "Count"])
+        
         df["Hashtags"] = df["Hashtags"].apply(lambda x: x if isinstance(x, list) else [])
         hashtags_list = df["Hashtags"].explode().dropna().tolist()
         hashtags_counter = Counter(hashtags_list)
         return pd.DataFrame(hashtags_counter.items(), columns=["Hashtag", "Count"]).sort_values(by="Count", ascending=False).head(50)
 
     def process_urls(df):
+        if "URLs Shared" not in df.columns:
+            # Return an empty DataFrame with the expected columns if no URLs are present.
+            return pd.DataFrame([], columns=["URL", "Count"])
+        
         df["URLs Shared"] = df["URLs Shared"].apply(lambda x: x if isinstance(x, list) else [])
 
         # Flatten the list of URLs, remove unwanted trailing characters, and normalize
@@ -124,7 +132,7 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None):
     def process_forwards(df):
         if "Is Forward" not in df.columns:
             # Return an empty DataFrame with the expected columns if no URLs are present.
-            return pd.DataFrame([], columns=["Domain", "Count"])
+            return pd.DataFrame([], columns=["Forward", "Count"])
         
         fwd_df = df[df["Is Forward"] == True]  # ✅ Filter forwarded messages
         fwd_df = fwd_df[~fwd_df["Origin Username"].isin(["Unknown", "Not Available"])]  # ✅ Exclude unknown sources

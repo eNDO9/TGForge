@@ -2,8 +2,8 @@ import pandas as pd
 import time
 from telethon.errors import FloodWaitError, RpcCallFailError
 
-async def fetch_forwards(client, channel_list):
-    """Fetches forwarded messages from a list of channels and outputs all possible fields."""
+async def fetch_forwards(client, channel_list, start_date=None, end_date=None):
+    """Fetches forwarded messages from a list of channels, with optional date range filtering."""
     all_messages_data = []
 
     for channel_name in channel_list:
@@ -11,7 +11,6 @@ async def fetch_forwards(client, channel_list):
             print(f"Fetching data for channel: {channel_name}")
             channel = await client.get_entity(channel_name)
 
-            # Fetch messages in smaller batches
             limit = 1000
             offset_id = 0
             total_messages = []
@@ -22,16 +21,36 @@ async def fetch_forwards(client, channel_list):
                     messages = await client.get_messages(channel, limit=limit, offset_id=offset_id)
                     if not messages:
                         break
-                    total_messages.extend(messages)
-                    offset_id = messages[-1].id  # Update offset to get the next batch
 
-                    # Respectful delay between requests
-                    time.sleep(1)
+                    stop_fetching = False
+                    # Process each message in this batch
+                    for message in messages:
+                        # Only consider forwarded messages
+                        if not message.forward:
+                            continue
+
+                        # Determine the filter date: if the forwarded message has its own date, use that;
+                        # otherwise, fallback to the message's date.
+                        if message.forward and message.forward.date:
+                            filter_date = message.forward.date.replace(tzinfo=None)
+                        else:
+                            filter_date = message.date.replace(tzinfo=None) if message.date else None
+
+                        # If a start_date is provided and this message is older, signal to stop fetching further.
+                        if start_date and filter_date and filter_date.date() < start_date:
+                            stop_fetching = True
+                            break
+
+                        # Only include messages within the specified range
+                        if ((not start_date or (filter_date and filter_date.date() >= start_date)) and 
+                            (not end_date or (filter_date and filter_date.date() <= end_date))):
+                            total_messages.append(message)
+
+                    if stop_fetching:
+                        break
                 except FloodWaitError as e:
-                    print(f"Flood wait error occurred. Waiting for {e.seconds} seconds...")
                     time.sleep(e.seconds + 1)
                 except RpcCallFailError as e:
-                    print(f"Telegram is having internal issues: {e}. Retrying after a delay...")
                     time.sleep(5)
 
             print(f"Fetched {len(total_messages)} messages from {channel_name}")

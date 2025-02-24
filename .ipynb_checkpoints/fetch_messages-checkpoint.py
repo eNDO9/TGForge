@@ -142,74 +142,87 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None):
         domains_counter = Counter(domains_list)
         return pd.DataFrame(domains_counter.items(), columns=["Domain", "Count"]).sort_values(by="Count", ascending=False).head(50)
     
-    # Volume Helper functions
-    def generate_daily_volume(df):
-        """Generates daily message counts per channel."""
+    def generate_daily_volume(df, start_date=None, end_date=None):
+        """Generates daily message counts per channel with date range control."""
         df["Message DateTime (UTC)"] = pd.to_datetime(df["Message DateTime (UTC)"])
         df["Date"] = df["Message DateTime (UTC)"].dt.date
 
-        # ✅ Count messages per day per channel
+        # Count messages per day per channel
         daily_counts = df.groupby(["Date", "Channel"]).size().reset_index(name="Total")
-
-        # ✅ Generate full date range
-        full_range = pd.date_range(start=daily_counts["Date"].min(), end=daily_counts["Date"].max(), freq="D")
-
-        # ✅ Create a full DataFrame with all channels
-        full_dates_df = pd.DataFrame({"Date": full_range})
         daily_counts["Date"] = pd.to_datetime(daily_counts["Date"])
 
-        # ✅ Pivot to make each channel a separate column
+        # Determine the full range based on user selection or data min/max
+        if start_date is None:
+            range_start = daily_counts["Date"].min()
+        else:
+            range_start = pd.Timestamp(start_date)
+        if end_date is None:
+            range_end = daily_counts["Date"].max()
+        else:
+            range_end = pd.Timestamp(end_date)
+
+        # Generate full date range (all days between range_start and range_end)
+        full_range = pd.date_range(start=range_start, end=range_end, freq="D")
+
+        # Pivot the data and reindex to fill missing days with 0
         daily_counts_pivot = daily_counts.pivot(index="Date", columns="Channel", values="Total").fillna(0)
+        daily_counts_pivot = daily_counts_pivot.reindex(full_range, fill_value=0)
+        daily_counts_pivot = daily_counts_pivot.reset_index().rename(columns={"index": "Date"})
+        return daily_counts_pivot
 
-        return daily_counts_pivot.reset_index()
 
-    def generate_weekly_volume(df):
-        """Generates weekly message counts per channel with missing weeks filled with 0."""
-        # Ensure the message datetime column is in datetime format
+    def generate_weekly_volume(df, start_date=None, end_date=None):
+        """Generates weekly message counts per channel with missing weeks filled with 0 and date range control."""
         df["Message DateTime (UTC)"] = pd.to_datetime(df["Message DateTime (UTC)"])
-        # Define the week by converting the date to a weekly period (weeks ending on Monday) and get the start (Tuesday)
-        df["Week"] = df["Message DateTime (UTC)"].dt.to_period("W-MON").apply(lambda r: r.start_time)
+        # Compute the week (using weeks ending on Monday but reporting Tuesday as the start)
+        df["Week"] = df["Message DateTime (UTC)"].dt.to_period("W-MON").dt.start_time
 
-        # Count messages per week per channel
         weekly_counts = df.groupby(["Week", "Channel"]).size().reset_index(name="Total")
         weekly_counts["Week"] = pd.to_datetime(weekly_counts["Week"])
 
-        # Create a complete date range for weeks between the earliest and latest week using freq="W-TUE"
-        full_range = pd.date_range(
-            start=weekly_counts["Week"].min(), 
-            end=weekly_counts["Week"].max(), 
-            freq="W-TUE"
-        )
+        if start_date is None:
+            range_start = weekly_counts["Week"].min()
+        else:
+            range_start = pd.Timestamp(start_date)
+        if end_date is None:
+            range_end = weekly_counts["Week"].max()
+        else:
+            range_end = pd.Timestamp(end_date)
 
-        # Pivot to make each channel a separate column
+        # Generate full weekly range using the same weekday as computed (W-TUE)
+        full_range = pd.date_range(start=range_start, end=range_end, freq="W-TUE")
+
         weekly_counts_pivot = weekly_counts.pivot(index="Week", columns="Channel", values="Total")
-        # Reindex using the full_range to fill missing weeks with 0 (only missing weeks are filled)
         weekly_counts_pivot = weekly_counts_pivot.reindex(full_range, fill_value=0)
-        # Reset the index and rename it to "Week"
         weekly_counts_pivot = weekly_counts_pivot.reset_index().rename(columns={"index": "Week"})
         return weekly_counts_pivot
+
     
-    def generate_monthly_volume(df):
-        """Generates monthly message counts per channel."""
+    def generate_monthly_volume(df, start_date=None, end_date=None):
+        """Generates monthly message counts per channel with date range control."""
         df["Message DateTime (UTC)"] = pd.to_datetime(df["Message DateTime (UTC)"])
+        # Compute the first day of the month
+        df["Year-Month"] = df["Message DateTime (UTC)"].dt.to_period("M").dt.start_time
 
-        # ✅ Extract the first day of the month
-        df["Year-Month"] = df["Message DateTime (UTC)"].dt.to_period("M").apply(lambda r: r.start_time)
-
-        # ✅ Count messages per month per channel
         monthly_counts = df.groupby(["Year-Month", "Channel"]).size().reset_index(name="Total")
-
-        # ✅ Generate full month range
-        full_range = pd.date_range(start=monthly_counts["Year-Month"].min(), end=monthly_counts["Year-Month"].max(), freq="MS")
-
-        # ✅ Create a full DataFrame with all channels
-        full_months_df = pd.DataFrame({"Year-Month": full_range})
         monthly_counts["Year-Month"] = pd.to_datetime(monthly_counts["Year-Month"])
 
-        # ✅ Pivot to make each channel a separate column
-        monthly_counts_pivot = monthly_counts.pivot(index="Year-Month", columns="Channel", values="Total").fillna(0)
+        if start_date is None:
+            range_start = monthly_counts["Year-Month"].min()
+        else:
+            range_start = pd.Timestamp(start_date)
+        if end_date is None:
+            range_end = monthly_counts["Year-Month"].max()
+        else:
+            range_end = pd.Timestamp(end_date)
 
-        return monthly_counts_pivot.reset_index()
+        # Generate full monthly range using Month Start frequency
+        full_range = pd.date_range(start=range_start, end=range_end, freq="MS")
+
+        monthly_counts_pivot = monthly_counts.pivot(index="Year-Month", columns="Channel", values="Total").fillna(0)
+        monthly_counts_pivot = monthly_counts_pivot.reindex(full_range, fill_value=0)
+        monthly_counts_pivot = monthly_counts_pivot.reset_index().rename(columns={"index": "Year-Month"})
+        return monthly_counts_pivot
 
     # Compute top analytics
     top_domains_df = process_domains(df)
@@ -218,10 +231,10 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None):
     top_urls_df = process_urls(df)
     
     # ✅ Add Volume Analysis
-    daily_volume = generate_daily_volume(df)
-    weekly_volume = generate_weekly_volume(df)
-    monthly_volume = generate_monthly_volume(df)
-    
+    daily_volume = generate_daily_volume(df, start_date, end_date)
+    weekly_volume = generate_weekly_volume(df, start_date, end_date)
+    monthly_volume = generate_monthly_volume(df, start_date, end_date)
+
     #st.text("DEBUG: Weekly Volume Before Returning:")
     #st.text(weekly_volume)
 

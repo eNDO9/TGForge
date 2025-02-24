@@ -45,8 +45,8 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None):
                 time.sleep(1)
 
                 # Check if a cancel flag was set:
-                if st.session_state.get("cancel_fetch", False):
-                    break
+                #if st.session_state.get("cancel_fetch", False):
+                    #break
 
             # Process messages
             messages_data = []

@@ -51,7 +51,6 @@ async def fetch_messages(client, channel_list):
                 hashtags = [tag for tag in message.text.split() if tag.startswith("#")] if message.text else []
                 reactions = sum([reaction.count for reaction in message.reactions.results]) if message.reactions else 0
                 geo_location = f"{message.geo.lat}, {message.geo.long}" if message.geo else "None"
-                
 
                 original_username = "Not Available"
                 if is_forward:

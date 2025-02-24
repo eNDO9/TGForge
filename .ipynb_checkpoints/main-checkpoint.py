@@ -106,15 +106,16 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
     # Channel usernames input
     channel_input = st.text_area("Enter Telegram channel usernames (comma-separated):", "epicdangerschat")
 
-    # For Messages and Forwards, add optional date range filters
-    if fetch_option in ["Messages", "Forwards"]:
+    # For Messages, Forwards, and Participants, allow optional date range filtering
+    start_date = end_date = None
+    if fetch_option in ["Messages", "Forwards", "Participants"]:
+        if fetch_option == "Participants":
+            participant_method = st.radio("Select Participant Fetch Method:", ["Default", "Via Messages"])
         use_date_range = st.checkbox("Optional: Filter by Date Range", value=False)
         if use_date_range:
             start_date = st.date_input("Start Date")
             end_date = st.date_input("End Date")
-        else:
-            start_date = None
-            end_date = None
+
     else:
         start_date = end_date = None
 

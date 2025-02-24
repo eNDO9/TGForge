@@ -101,7 +101,7 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
     st.subheader("Fetch Telegram Channel Data")
 
     # Choose what to fetch
-    fetch_option = st.radio("Select Data to Fetch:", ["Channel Info", "Messages", "Forwards"])
+    fetch_option = st.radio("Select Data to Fetch:", ["Channel Info", "Messages", "Forwards", "Participants"])
 
     # Channel usernames input
     channel_input = st.text_area("Enter Telegram channel usernames (comma-separated):", "")

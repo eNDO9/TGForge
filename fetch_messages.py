@@ -163,48 +163,26 @@ async def fetch_messages(client, channel_list):
 
     def generate_weekly_volume(df):
         """Generates weekly message counts per channel."""
+        # Ensure the message datetime column is in datetime format
         df["Message DateTime (UTC)"] = pd.to_datetime(df["Message DateTime (UTC)"])
-
-        # ✅ Extract the start of the week (Monday)
+        # Define the week by converting the date to a weekly period starting on Monday
         df["Week"] = df["Message DateTime (UTC)"].dt.to_period("W-MON").apply(lambda r: r.start_time)
 
-        # 🔍 DEBUG: Print unique extracted weeks
-        st.print("DEBUG: Unique weeks extracted:")
-        st.print(df["Week"].unique())
-
-        # ✅ Count messages per week per channel
+        # Count messages per week per channel
         weekly_counts = df.groupby(["Week", "Channel"]).size().reset_index(name="Total")
-        weekly_counts["Week"] = pd.to_datetime(weekly_counts["Week"])  # Ensure datetime format
 
-        # 🔍 DEBUG: Print weekly_counts before pivot
-        st.print("DEBUG: weekly_counts before pivot:")
-        st.print(weekly_counts)
+        # Create a complete date range for weeks between the earliest and latest week
+        full_range = pd.date_range(start=weekly_counts["Week"].min(), 
+                                   end=weekly_counts["Week"].max(), 
+                                   freq="W-MON")
 
-        # ✅ Pivot to make each channel a separate column
-        if weekly_counts.empty:
-            return pd.DataFrame(columns=["Week"])  # Return empty dataframe if no data
-
+        # Pivot to make each channel a separate column
         weekly_counts_pivot = weekly_counts.pivot(index="Week", columns="Channel", values="Total").fillna(0)
-
-        # 🔍 DEBUG: Print pivot table before reindexing
-        st.print("DEBUG: weekly_counts_pivot before reindexing:")
-        st.print(weekly_counts_pivot)
-
-        # ✅ Generate full weekly range
-        full_weeks = pd.date_range(start=weekly_counts["Week"].min(), end=weekly_counts["Week"].max(), freq="W-MON")
-
-        # ✅ Reindex to fill in missing weeks with 0s **(Only if there are actual counts)**
-        if not weekly_counts_pivot.empty:
-            weekly_counts_pivot = weekly_counts_pivot.reindex(full_weeks, fill_value=0)
-            weekly_counts_pivot.index.name = "Week"
-
-        # 🔍 DEBUG: Print final weekly_counts_pivot
-        st.print("DEBUG: weekly_counts_pivot after reindexing:")
-        st.print(weekly_counts_pivot)
+        # Ensure all weeks in the full range are represented
+        weekly_counts_pivot = weekly_counts_pivot.reindex(full_range, fill_value=0)
+        weekly_counts_pivot.index.name = "Week"
 
         return weekly_counts_pivot.reset_index()
-
-
     
     def generate_monthly_volume(df):
         """Generates monthly message counts per channel."""

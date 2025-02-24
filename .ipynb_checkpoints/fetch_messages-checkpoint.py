@@ -172,17 +172,17 @@ async def fetch_messages(client, channel_list):
         weekly_counts = df.groupby(["Week", "Channel"]).size().reset_index(name="Total")
         weekly_counts["Week"] = pd.to_datetime(weekly_counts["Week"])  # Ensure datetime format
 
-        # ✅ Generate full weekly range
-        full_weeks = pd.date_range(start=weekly_counts["Week"].min(), end=weekly_counts["Week"].max(), freq="W-MON")
-        full_weeks_df = pd.DataFrame({"Week": full_weeks})
-
-        # ✅ Merge with weekly counts, filling missing values with 0
+        # ✅ Pivot to make each channel a separate column
         weekly_counts_pivot = weekly_counts.pivot(index="Week", columns="Channel", values="Total").fillna(0)
-        weekly_counts_pivot = full_weeks_df.merge(weekly_counts_pivot, on="Week", how="left").fillna(0)
+
+        # ✅ Reindex to fill in missing weeks with 0s
+        full_weeks = pd.date_range(start=weekly_counts["Week"].min(), end=weekly_counts["Week"].max(), freq="W-MON")
+        weekly_counts_pivot = weekly_counts_pivot.reindex(full_weeks, fill_value=0)
+        weekly_counts_pivot.index.name = "Week"
 
         return weekly_counts_pivot.reset_index()
-    
 
+    
     def generate_monthly_volume(df):
         """Generates monthly message counts per channel."""
         df["Message DateTime (UTC)"] = pd.to_datetime(df["Message DateTime (UTC)"])

@@ -169,16 +169,16 @@ async def fetch_messages(client, channel_list):
         df["Week"] = df["Message DateTime (UTC)"].dt.to_period("W-MON").apply(lambda r: r.start_time)
 
         # 🔍 DEBUG: Print unique extracted weeks
-        st.text("DEBUG: Unique weeks extracted:")
-        st.text(df["Week"].unique())
+        st.print("DEBUG: Unique weeks extracted:")
+        st.print(df["Week"].unique())
 
         # ✅ Count messages per week per channel
         weekly_counts = df.groupby(["Week", "Channel"]).size().reset_index(name="Total")
         weekly_counts["Week"] = pd.to_datetime(weekly_counts["Week"])  # Ensure datetime format
 
         # 🔍 DEBUG: Print weekly_counts before pivot
-        st.text("DEBUG: weekly_counts before pivot:")
-        st.dataframe(weekly_counts)
+        st.print("DEBUG: weekly_counts before pivot:")
+        st.print(weekly_counts)
 
         # ✅ Pivot to make each channel a separate column
         if weekly_counts.empty:
@@ -187,8 +187,8 @@ async def fetch_messages(client, channel_list):
         weekly_counts_pivot = weekly_counts.pivot(index="Week", columns="Channel", values="Total").fillna(0)
 
         # 🔍 DEBUG: Print pivot table before reindexing
-        st.text("DEBUG: weekly_counts_pivot before reindexing:")
-        st.dataframe(weekly_counts_pivot)
+        st.print("DEBUG: weekly_counts_pivot before reindexing:")
+        st.print(weekly_counts_pivot)
 
         # ✅ Generate full weekly range
         full_weeks = pd.date_range(start=weekly_counts["Week"].min(), end=weekly_counts["Week"].max(), freq="W-MON")
@@ -199,8 +199,8 @@ async def fetch_messages(client, channel_list):
             weekly_counts_pivot.index.name = "Week"
 
         # 🔍 DEBUG: Print final weekly_counts_pivot
-        st.text("DEBUG: weekly_counts_pivot after reindexing:")
-        st.dataframe(weekly_counts_pivot)
+        st.print("DEBUG: weekly_counts_pivot after reindexing:")
+        st.print(weekly_counts_pivot)
 
         return weekly_counts_pivot.reset_index()
 

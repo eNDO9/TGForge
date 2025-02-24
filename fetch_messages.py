@@ -166,7 +166,7 @@ async def fetch_messages(client, channel_list):
         df["Message DateTime (UTC)"] = pd.to_datetime(df["Message DateTime (UTC)"])
 
         # ✅ Extract the start of the week (Monday)
-        df["Week"] = df["Message DateTime (UTC)"].dt.to_period("W-MON").apply(lambda r: r.start_time).dt.normalize()
+        df["Week"] = df["Message DateTime (UTC)"].dt.to_period("W-MON").apply(lambda r: r.start_time)
         
         # ✅ Count messages per week per channel
         weekly_counts = df.groupby(["Week", "Channel"]).size().reset_index(name="Total")
@@ -179,11 +179,7 @@ async def fetch_messages(client, channel_list):
         weekly_counts_pivot = weekly_counts.pivot(index="Week", columns="Channel", values="Total").fillna(0)
 
         # ✅ Generate full weekly range
-        full_weeks = pd.date_range(
-            start=weekly_counts["Week"].min().normalize(),
-            end=weekly_counts["Week"].max().normalize(),
-            freq="W-MON"
-        )
+        full_weeks = pd.date_range(start=weekly_counts["Week"].min(), end=weekly_counts["Week"].max(), freq="W-MON")
 
         # ✅ Reindex to fill in missing weeks with 0s **(Only if there are actual counts)**
         if not weekly_counts_pivot.empty:

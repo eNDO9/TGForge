@@ -122,6 +122,10 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None):
     
     # ✅ Process Forward Counts
     def process_forwards(df):
+        if "Is Forward" not in df.columns:
+            # Return an empty DataFrame with the expected columns if no URLs are present.
+            return pd.DataFrame([], columns=["Domain", "Count"])
+        
         fwd_df = df[df["Is Forward"] == True]  # ✅ Filter forwarded messages
         fwd_df = fwd_df[~fwd_df["Origin Username"].isin(["Unknown", "Not Available"])]  # ✅ Exclude unknown sources
 

@@ -1,6 +1,6 @@
 import pandas as pd
 import time
-import streamlit as st  # Added import for Streamlit
+import streamlit as st
 from telethon.errors import FloodWaitError, RpcCallFailError
 
 async def fetch_forwards(client, channel_list, start_date=None, end_date=None):
@@ -38,9 +38,12 @@ async def fetch_forwards(client, channel_list, start_date=None, end_date=None):
                             filter_date = message.date.replace(tzinfo=None) if message.date else None
 
                         # If a start_date is provided and this message is older, signal to stop fetching further.
-                        if start_date and filter_date and filter_date.date() < start_date:
-                            stop_fetching = True
-                            break
+                        if start_date or end_date:
+                            total_messages = [
+                                m for m in total_messages 
+                                if (not start_date or (get_filter_date(m) and get_filter_date(m).date() >= start_date)) and 
+                                   (not end_date or (get_filter_date(m) and get_filter_date(m).date() <= end_date))
+                            ]
 
                         # Only include messages within the specified range
                         if ((not start_date or (filter_date and filter_date.date() >= start_date)) and 

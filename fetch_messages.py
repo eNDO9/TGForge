@@ -6,6 +6,7 @@ from collections import Counter
 from urllib.parse import urlparse
 from telethon.errors import FloodWaitError, RpcCallFailError
 from telethon.tl.types import PeerUser
+import streamlit as st
 
 
 async def fetch_messages(client, channel_list, start_date=None, end_date=None):
@@ -45,8 +46,8 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None):
                 time.sleep(1)
 
                 # Check if a cancel flag was set:
-                #if st.session_state.get("cancel_fetch", False):
-                    #break
+                if st.session_state.get("cancel_fetch", False):
+                    break
 
             # Process messages
             messages_data = []
@@ -102,20 +103,12 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None):
 
     # Generate Analytics (Hashtags, URLs, Volume Trends)
     def process_hashtags(df):
-        if "Hashtags" not in df.columns:
-            # Return an empty DataFrame with the expected columns if no URLs are present.
-            return pd.DataFrame([], columns=["Hashtag", "Count"])
-        
         df["Hashtags"] = df["Hashtags"].apply(lambda x: x if isinstance(x, list) else [])
         hashtags_list = df["Hashtags"].explode().dropna().tolist()
         hashtags_counter = Counter(hashtags_list)
         return pd.DataFrame(hashtags_counter.items(), columns=["Hashtag", "Count"]).sort_values(by="Count", ascending=False).head(50)
 
     def process_urls(df):
-        if "URLs Shared" not in df.columns:
-            # Return an empty DataFrame with the expected columns if no URLs are present.
-            return pd.DataFrame([], columns=["URL", "Count"])
-        
         df["URLs Shared"] = df["URLs Shared"].apply(lambda x: x if isinstance(x, list) else [])
 
         # Flatten the list of URLs, remove unwanted trailing characters, and normalize
@@ -130,10 +123,6 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None):
     
     # ✅ Process Forward Counts
     def process_forwards(df):
-        if "Is Forward" not in df.columns:
-            # Return an empty DataFrame with the expected columns if no URLs are present.
-            return pd.DataFrame([], columns=["Forward", "Count"])
-        
         fwd_df = df[df["Is Forward"] == True]  # ✅ Filter forwarded messages
         fwd_df = fwd_df[~fwd_df["Origin Username"].isin(["Unknown", "Not Available"])]  # ✅ Exclude unknown sources
 
@@ -149,10 +138,6 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None):
 
     # Process domain counts
     def process_domains(df):
-        if "URLs Shared" not in df.columns:
-            # Return an empty DataFrame with the expected columns if no URLs are present.
-            return pd.DataFrame([], columns=["Domain", "Count"])
-
         df["URLs Shared"] = df["URLs Shared"].apply(lambda x: x if isinstance(x, list) else [])
         domains_list = [
             re.sub(r"[^\w.-]+$", "", re.sub(r"^www\.", "", urlparse(url).netloc)).lower()
@@ -162,7 +147,6 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None):
         domains_counter = Counter(domains_list)
         return pd.DataFrame(domains_counter.items(), columns=["Domain", "Count"]).sort_values(by="Count", ascending=False).head(50)
 
-    
     def generate_daily_volume(df, start_date=None, end_date=None):
         """Generates daily message counts per channel with date range control."""
         df["Message DateTime (UTC)"] = pd.to_datetime(df["Message DateTime (UTC)"])
@@ -190,7 +174,6 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None):
         daily_counts_pivot = daily_counts_pivot.reindex(full_range, fill_value=0)
         daily_counts_pivot = daily_counts_pivot.reset_index().rename(columns={"index": "Date"})
         return daily_counts_pivot
-
 
     def generate_weekly_volume(df, start_date=None, end_date=None):
         """Generates weekly message counts per channel with missing weeks filled with 0 and date range control."""

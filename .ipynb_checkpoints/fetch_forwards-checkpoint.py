@@ -6,8 +6,8 @@ from telethon.errors import FloodWaitError, RpcCallFailError
 async def fetch_forwards(client, channel_list, start_date=None, end_date=None):
     """Fetches forwarded messages from a list of channels, with optional date range filtering."""
     all_messages_data = []
-    
-    # from message fetching
+    limit = 1000  
+
     for channel_name in channel_list:
         channel = await client.get_entity(channel_name)
         offset_id = 0
@@ -21,10 +21,6 @@ async def fetch_forwards(client, channel_list, start_date=None, end_date=None):
 
                 stop_fetching = False  # Flag to stop if we go before the start_date
                 for message in messages:
-                    # Only consider forwarded messages
-                    if not message.forward:
-                        continue
-                    
                     message_datetime = message.date.replace(tzinfo=None) if message.date else None
                     
                     # If we've reached messages older than our start_date, break out of the loop.

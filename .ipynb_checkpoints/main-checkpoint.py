@@ -6,6 +6,7 @@ from telegram_client import create_client, delete_session_file
 from fetch_channel import fetch_channel_data
 from fetch_forwards import fetch_forwards
 from fetch_messages import fetch_messages
+from fetch_participants import fetch_participants
 from telethon.errors import PhoneNumberInvalidError, PhoneCodeInvalidError, SessionPasswordNeededError
 
 # --- Ensure an Event Loop Exists ---
@@ -137,6 +138,26 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
                 st.session_state.event_loop.run_until_complete(
                     fetch_forwards(st.session_state.client, channel_input.split(","), start_date, end_date)
                 )
+    elif fetch_option == "Participants":
+        if st.button("Fetch Participants"):
+            groups = [g.strip() for g in channel_input.split(",") if g.strip()]
+            if not groups:
+                st.error("Please enter at least one valid group name.")
+            else:
+                if participant_method == "Default":
+                    # Fetch participants using the default method
+                    (st.session_state.participants_data, 
+                     st.session_state.participants_reported,
+                     st.session_state.participants_fetched) = st.session_state.event_loop.run_until_complete(
+                        fetch_participants(st.session_state.client, groups, method="default")
+                    )
+                else:
+                    # Fetch participants via messages (using date range if provided)
+                    (st.session_state.participants_data, 
+                     st.session_state.participants_reported,
+                     st.session_state.participants_fetched) = st.session_state.event_loop.run_until_complete(
+                        fetch_participants(st.session_state.client, groups, method="messages", start_date=start_date, end_date=end_date)
+                    )
     
     # --- Refresh Button (Clears Display But Keeps Data) ---
     if st.button("🔄 Refresh / Cancel"):
@@ -354,3 +375,12 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
             file_name="forwards_analysis.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
+    elif "participants_data" in st.session_state and not pd.DataFrame(st.session_state.participants_data).empty:
+        df_participants = pd.DataFrame(st.session_state.participants_data)
+        output_xlsx_participants = io.BytesIO()
+        with pd.ExcelWriter(output_xlsx_participants, engine="openpyxl") as writer:
+            df_participants.to_excel(writer, sheet_name="Participants", index=False)
+        output_xlsx_participants.seek(0)
+        st.download_button("📥 Download Participants Data (Excel)", data=output_xlsx_participants.getvalue(),
+                           file_name="participants_analysis.xlsx", 
+                           mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")

@@ -42,10 +42,6 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None):
             offset_id = messages[-1].id if messages else offset_id
             time.sleep(1)
 
-        # Process total_messages into your desired format...
-        # (Rest of your existing processing code)
-        all_messages_data.extend(processed_messages)
-
             # Process messages
             messages_data = []
             for message in total_messages:

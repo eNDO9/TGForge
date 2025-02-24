@@ -99,29 +99,40 @@ elif st.session_state.auth_step == 2:
 elif st.session_state.auth_step == 3 and st.session_state.authenticated:
     st.subheader("Fetch Telegram Channel Data")
 
-    # User Input
-    channel_input = st.text_area("Enter Telegram channel usernames (comma-separated):", "unity_of_fields")
-    
-    col1, col2, col3 = st.columns(3)
+    # Choose what to fetch
+    fetch_option = st.radio("Select Data to Fetch:", ["Channel Info", "Messages", "Forwards"])
 
-    with col1:
+    # Channel usernames input
+    channel_input = st.text_area("Enter Telegram channel usernames (comma-separated):", "unity_of_fields")
+
+    # For Messages and Forwards, add optional date range filters
+    if fetch_option in ["Messages", "Forwards"]:
+        st.subheader("Optional: Set Date Range")
+        start_date = st.date_input("Start Date")
+        end_date = st.date_input("End Date")
+    else:
+        start_date = end_date = None
+
+    # Fetch buttons for each option
+    if fetch_option == "Channel Info":
         if st.button("Fetch Channel Info"):
             st.session_state.channel_data = st.session_state.event_loop.run_until_complete(
                 fetch_channel_data(st.session_state.client, channel_input.split(","))
             )
-
-    with col2:
-        if st.button("Fetch Forwards"):
-            st.session_state.forwards_data, st.session_state.forward_counts = st.session_state.event_loop.run_until_complete(
-                fetch_forwards(st.session_state.client, channel_input.split(","))
-            )
-
-    with col3:
+    elif fetch_option == "Messages":
         if st.button("Fetch Messages"):
             st.session_state.messages_data, st.session_state.top_hashtags, st.session_state.top_urls, \
-            st.session_state.top_domains, st.session_state.forward_counts, \
-            st.session_state.daily_volume, st.session_state.weekly_volume, st.session_state.monthly_volume = \
-            st.session_state.event_loop.run_until_complete(fetch_messages(st.session_state.client, channel_input.split(",")))
+            st.session_state.top_domains, st.session_state.forward_counts, st.session_state.daily_volume, \
+            st.session_state.weekly_volume, st.session_state.monthly_volume = \
+                st.session_state.event_loop.run_until_complete(
+                    fetch_messages(st.session_state.client, channel_input.split(","), start_date, end_date)
+                )
+    elif fetch_option == "Forwards":
+        if st.button("Fetch Forwards"):
+            st.session_state.forwards_data, st.session_state.forward_counts = \
+                st.session_state.event_loop.run_until_complete(
+                    fetch_forwards(st.session_state.client, channel_input.split(","), start_date, end_date)
+                )
     
     # --- Refresh Button (Clears Display But Keeps Data) ---
     if st.button("🔄 Refresh"):

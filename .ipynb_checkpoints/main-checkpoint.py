@@ -104,7 +104,9 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
     fetch_option = st.radio("Select Data to Fetch:", ["Channel Info", "Messages", "Forwards", "Participants"])
 
     # Channel usernames input
-    channel_input = st.text_area("Enter Telegram channel usernames (comma-separated):", "")
+    channel_input = st.text_area("Enter Telegram channel usernames (comma-separated):", "epicdangerschat", 
+                                 "dotconnectinganonschat", "FreeSpeechCoalition", 
+                                 "ghostpatriotchat", "QNewsOfficialTVGodWinsChat")
 
     # For Messages and Forwards, add optional date range filters
     if fetch_option in ["Messages", "Forwards"]:

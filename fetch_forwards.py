@@ -48,12 +48,14 @@ async def fetch_forwards(client, channel_list, start_date=None, end_date=None):
 
                     if stop_fetching:
                         break
-                except FloodWaitError as e:
-                    time.sleep(e.seconds + 1)
-                except RpcCallFailError as e:
-                    time.sleep(5)
+                        
+                    # Inside your while loop in fetch_messages.py:
+                    offset_id = messages[-1].id if messages else offset_id
+                    time.sleep(1)
 
-            print(f"Fetched {len(total_messages)} messages from {channel_name}")
+                    # Check if a cancel flag was set:
+                    if st.session_state.get("cancel_fetch", False):
+                        break
 
             # Process messages
             messages_data = []

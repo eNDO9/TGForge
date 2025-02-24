@@ -40,8 +40,13 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None):
                 if stop_fetching:
                     break
 
+                # Inside your while loop in fetch_messages.py:
                 offset_id = messages[-1].id if messages else offset_id
                 time.sleep(1)
+
+                # Check if a cancel flag was set:
+                if st.session_state.get("cancel_fetch", False):
+                    break
 
             # Process messages
             messages_data = []

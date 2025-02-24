@@ -139,13 +139,21 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
                 )
     
     # --- Refresh Button (Clears Display But Keeps Data) ---
-    if st.button("🔄 Refresh"):
+    if st.button("🔄 Refresh / Cancel"):
+        # Signal cancellation to any running fetch tasks
+        st.session_state.cancel_fetch = True
+
+        # Clear the displayed data keys
         for key in ["channel_data", "forwards_data", "messages_data", "top_hashtags",
                     "top_urls", "top_domains", "forward_counts", "daily_volume",
                     "weekly_volume", "monthly_volume"]:
             if key in st.session_state:
-                del st.session_state[key]  # Remove only displayed data, not authentication
-        st.rerun()  # ✅ Force Streamlit to refresh the UI
+                del st.session_state[key]
+
+        # Optionally, clear the cancellation flag for the next run
+        st.session_state.cancel_fetch = False
+
+        st.rerun()
 
     # ✅ Restore original printing format for channel info
     if "channel_data" in st.session_state and st.session_state.channel_data:

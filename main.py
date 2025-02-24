@@ -261,7 +261,7 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
     if "weekly_volume" in st.session_state:
         df_weekly = pd.DataFrame(st.session_state.weekly_volume)
         st.text("DEBUG: st.session_state.weekly_volume")
-        st.text(df_weekly.Week)
+        st.text(df_weekly)
         plot_vot_chart(df_weekly, "Week", "📆 Weekly Message Volume", freq="W-MON")
 
     if "monthly_volume" in st.session_state:

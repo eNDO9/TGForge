@@ -1,5 +1,6 @@
 import pandas as pd
 import time
+import streamlit as st  # Added import for Streamlit
 from telethon.errors import FloodWaitError, RpcCallFailError
 
 async def fetch_forwards(client, channel_list, start_date=None, end_date=None):
@@ -49,13 +50,20 @@ async def fetch_forwards(client, channel_list, start_date=None, end_date=None):
                     if stop_fetching:
                         break
                         
-                    # Inside your while loop in fetch_messages.py:
                     offset_id = messages[-1].id if messages else offset_id
                     time.sleep(1)
 
                     # Check if a cancel flag was set:
                     if st.session_state.get("cancel_fetch", False):
+                        print("Fetch cancelled by user.")
                         break
+
+                except FloodWaitError as e:
+                    print(f"Flood wait error occurred. Waiting for {e.seconds} seconds...")
+                    time.sleep(e.seconds + 1)
+                except RpcCallFailError as e:
+                    print(f"Telegram internal issue: {e}. Retrying after a delay...")
+                    time.sleep(5)
 
             # Process messages
             messages_data = []

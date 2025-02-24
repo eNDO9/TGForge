@@ -256,16 +256,19 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
     # ✅ Show Volume Over Time Charts with Missing Dates Filled
     if "daily_volume" in st.session_state:
         df_daily = pd.DataFrame(st.session_state.daily_volume)
+        df_daily = df_daily.fillna(0)
         plot_vot_chart(df_daily, "Date", "📊 Daily Message Volume", freq="D")
 
     if "weekly_volume" in st.session_state:
         df_weekly = pd.DataFrame(st.session_state.weekly_volume)
+        df_weekly = df_weekly.fillna(0)
         st.text("DEBUG: st.session_state.weekly_volume")
         st.text(df_weekly.tail(10))
         plot_vot_chart(df_weekly, "Week", "📆 Weekly Message Volume", freq="W-TUE")
 
     if "monthly_volume" in st.session_state:
         df_monthly = pd.DataFrame(st.session_state.monthly_volume)
+        df_monthly = df_monthly.fillna(0)
         plot_vot_chart(df_monthly, "Year-Month", "📅 Monthly Message Volume", freq="MS")
      
     # CSV Download

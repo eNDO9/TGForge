@@ -268,12 +268,17 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
         st.write("### Participants (Aggregated by User)")
         df_participants = pd.DataFrame(st.session_state.participants_data)
 
-        # Define user columns (adjust these if needed)
-        user_cols = ["User ID", "Username", "First Name", "Last Name", "Status"]
-        # Assume all other columns are group membership flags.
+        # Explicitly define known user info columns.
+        user_cols = [
+            "User ID", "Deleted", "Is Bot", "Verified", "Restricted", "Scam", "Fake", 
+            "Premium", "Access Hash", "First Name", "Last Name", "Username", "Phone", 
+            "Status", "Timezone Info", "Restriction Reason", "Language Code", "Last Seen", 
+            "Profile Picture DC ID", "Profile Picture Photo ID"
+        ]
+        # Assume that any column not in user_cols is a group membership flag.
         group_cols = [col for col in df_participants.columns if col not in user_cols]
 
-        # Group by "User ID": for standard columns take the first occurrence; for group flags take the max.
+        # Group by "User ID": for user info take the first value; for group flags, take max.
         aggregated = df_participants.groupby("User ID").agg({
             "Username": "first",
             "First Name": "first",
@@ -282,24 +287,30 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
             **{col: "max" for col in group_cols}
         }).reset_index()
 
-        # Convert group membership columns to numeric before summing.
-        aggregated[group_cols] = aggregated[group_cols].fillna(0).apply(pd.to_numeric, errors='coerce').fillna(0).astype(int)
+        # Convert group membership columns to numeric (if they aren't already)
+        if group_cols:
+            aggregated[group_cols] = aggregated[group_cols].fillna(0).apply(pd.to_numeric, errors='coerce').fillna(0).astype(int)
+            # Calculate the number of groups for each user.
+            aggregated["Group Count"] = aggregated[group_cols].sum(axis=1)
+            # Build a comma‑separated list of groups for each user.
+            aggregated["Groups"] = aggregated[group_cols].apply(
+                lambda row: ", ".join([col for col in group_cols if row[col] == 1]), axis=1
+            )
+        else:
+            aggregated["Group Count"] = 0
+            aggregated["Groups"] = ""
 
-        # Calculate how many groups each user is active in.
-        aggregated["Group Count"] = aggregated[group_cols].sum(axis=1)
-        # Create a comma-separated list of groups where the user is active.
-        aggregated["Groups"] = aggregated[group_cols].apply(
-            lambda row: ", ".join([col for col in group_cols if row[col] == 1]), axis=1
-        )
-
-        # Create tabs: one showing all aggregated participants, one showing users active in 2+ groups.
+        # Create two tabs: one with all aggregated participants and one for those in 2 or more groups.
         tabs = st.tabs(["All Participants", "Active in ≥ 2 Chats"])
         with tabs[0]:
             st.dataframe(aggregated)
         with tabs[1]:
             multi = aggregated[aggregated["Group Count"] >= 2]
             st.dataframe(multi[["User ID", "Username", "Group Count", "Groups"]])
-    
+
+        # Optionally, write a summary below the tabs
+        st.write("Total unique participants collected:", len(aggregated))
+
     # ✅ Define color palette
     COLOR_PALETTE = ["#C7074D", "#B4B2B1", "#4C4193", "#0068B2", "#E76863", "#5C6771"]
 
@@ -415,10 +426,39 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
         )
     elif "participants_data" in st.session_state and not pd.DataFrame(st.session_state.participants_data).empty:
         df_participants = pd.DataFrame(st.session_state.participants_data)
+        # (Recreate the aggregated view as above)
+        user_cols = [
+            "User ID", "Deleted", "Is Bot", "Verified", "Restricted", "Scam", "Fake", 
+            "Premium", "Access Hash", "First Name", "Last Name", "Username", "Phone", 
+            "Status", "Timezone Info", "Restriction Reason", "Language Code", "Last Seen", 
+            "Profile Picture DC ID", "Profile Picture Photo ID"
+        ]
+        group_cols = [col for col in df_participants.columns if col not in user_cols]
+        aggregated = df_participants.groupby("User ID").agg({
+            "Username": "first",
+            "First Name": "first",
+            "Last Name": "first",
+            "Status": "first",
+            **{col: "max" for col in group_cols}
+        }).reset_index()
+        if group_cols:
+            aggregated[group_cols] = aggregated[group_cols].fillna(0).apply(pd.to_numeric, errors='coerce').fillna(0).astype(int)
+            aggregated["Group Count"] = aggregated[group_cols].sum(axis=1)
+            aggregated["Groups"] = aggregated[group_cols].apply(
+                lambda row: ", ".join([col for col in group_cols if row[col] == 1]), axis=1
+            )
+        else:
+            aggregated["Group Count"] = 0
+            aggregated["Groups"] = ""
+
         output_xlsx_participants = io.BytesIO()
         with pd.ExcelWriter(output_xlsx_participants, engine="openpyxl") as writer:
-            df_participants.to_excel(writer, sheet_name="Participants", index=False)
+            df_participants.to_excel(writer, sheet_name="Raw Participants", index=False)
+            aggregated.to_excel(writer, sheet_name="Aggregated Participants", index=False)
         output_xlsx_participants.seek(0)
-        st.download_button("📥 Download Participants Data (Excel)", data=output_xlsx_participants.getvalue(),
-                           file_name="participants_analysis.xlsx", 
-                           mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+        st.download_button(
+            "📥 Download Participants Data (Excel)",
+            data=output_xlsx_participants.getvalue(),
+            file_name="participants_analysis.xlsx",
+            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )

@@ -63,8 +63,16 @@ async def fetch_participants_via_messages(client, group_name, start_date=None, e
             messages = await client.get_messages(group_name, limit=limit, offset_id=offset_id)
             if not messages:
                 break
+
+            # Because messages are returned sorted by date descending,
+            # if the oldest message in this batch is older than our start_date,
+            # then we can break out.
+            if start_date and messages[-1].date:
+                last_msg_date = messages[-1].date.replace(tzinfo=None).date()
+                if last_msg_date < start_date:
+                    break
+
             for message in messages:
-                # Apply date range filtering if provided
                 if message.date:
                     msg_date = message.date.replace(tzinfo=None).date()
                     if start_date and msg_date < start_date:
@@ -73,6 +81,7 @@ async def fetch_participants_via_messages(client, group_name, start_date=None, e
                         continue
                 all_messages.append(message)
             offset_id = messages[-1].id
+            # Respectful delay between requests
             time.sleep(1)
         print(f"Fetched {len(all_messages)} messages from {group_name}")
 

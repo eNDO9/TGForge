@@ -53,6 +53,7 @@ async def fetch_participants_via_messages(client, group_name, start_date=None, e
     """
     Fetch participants from a group by collecting messages and extracting unique senders.
     Optionally filter messages by date range.
+    Returns a DataFrame with detailed participant information.
     """
     try:
         print(f"Fetching messages for group {group_name} for participant extraction...")
@@ -62,12 +63,15 @@ async def fetch_participants_via_messages(client, group_name, start_date=None, e
         while True:
             messages = await client.get_messages(group_name, limit=limit, offset_id=offset_id)
             if not messages:
+                print("No more messages in batch.")
                 break
-            # If messages are returned sorted by date descending,
-            # check if the oldest message in this batch is older than start_date.
+            print(f"Fetched {len(messages)} messages in batch for group {group_name}.")
+            # Check the date of the oldest message in this batch.
             if start_date and messages[-1].date:
                 last_msg_date = messages[-1].date.replace(tzinfo=None).date()
+                print(f"Batch oldest message date: {last_msg_date} | Start Date: {start_date}")
                 if last_msg_date < start_date:
+                    print("Oldest message in batch is before start_date; stopping fetch.")
                     break
             for message in messages:
                 if message.date:
@@ -79,26 +83,35 @@ async def fetch_participants_via_messages(client, group_name, start_date=None, e
                 all_messages.append(message)
             offset_id = messages[-1].id
             time.sleep(1)
-            # Check if a cancel flag was set:
             if st.session_state.get("cancel_fetch", False):
+                print("Fetch participants via messages cancelled by user.")
                 break
-                
-        print(f"Fetched {len(all_messages)} messages from {group_name}")
-
-        # Extract unique participants from message senders
+        print(f"Total messages collected for group {group_name}: {len(all_messages)}")
+        
+        # Extract unique participants with detailed info
         participants = {}
         for message in all_messages:
             if message.sender:
-                uid = message.sender.id
-                if uid not in participants:
-                    participants[uid] = {
-                        'User ID': uid,
-                        'Username': message.sender.username if message.sender.username else 'No Username',
-                        'First Name': message.sender.first_name if message.sender.first_name else 'No First Name',
-                        'Last Name': message.sender.last_name if message.sender.last_name else 'No Last Name',
+                user = message.sender
+                if user.id not in participants:
+                    participants[user.id] = {
+                        "User ID": user.id,
+                        "Deleted": user.deleted if hasattr(user, "deleted") else False,
+                        "Is Bot": user.bot if hasattr(user, "bot") else False,
+                        "Verified": user.verified if hasattr(user, "verified") else False,
+                        "Restricted": user.restricted if hasattr(user, "restricted") else False,
+                        "Scam": user.scam if hasattr(user, "scam") else False,
+                        "Fake": user.fake if hasattr(user, "fake") else False,
+                        "Premium": getattr(user, "premium", False),
+                        "Access Hash": user.access_hash,
+                        "First Name": user.first_name if user.first_name else "No First Name",
+                        "Last Name": user.last_name if user.last_name else "No Last Name",
+                        "Username": user.username if user.username else "No Username",
+                        "Phone": user.phone if user.phone else "No Phone",
+                        "Status": str(user.status) if user.status else "Not Available",
                     }
+        print(f"Extracted {len(participants)} unique participants from group {group_name}")
         df = pd.DataFrame(list(participants.values()))
-        print(f"Extracted {len(df)} unique participants from messages in {group_name}")
         return df
     except Exception as e:
         print(f"Error fetching participants via messages for {group_name}: {e}")

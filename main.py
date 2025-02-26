@@ -166,17 +166,15 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
     if st.button("🔄 Refresh / Cancel"):
         # Signal cancellation to any running fetch tasks
         st.session_state.cancel_fetch = True
-
-        # Clear the displayed data keys
+        # Clear all keys—including those for participants—in session state
         for key in ["channel_data", "forwards_data", "messages_data", "top_hashtags",
                     "top_urls", "top_domains", "forward_counts", "daily_volume",
-                    "weekly_volume", "monthly_volume"]:
+                    "weekly_volume", "monthly_volume", "participants_data",
+                    "participants_reported", "participants_fetched", "participants_group_counts"]:
             if key in st.session_state:
                 del st.session_state[key]
-
-        # Optionally, clear the cancellation flag for the next run
+        # Clear the cancellation flag for the next run
         st.session_state.cancel_fetch = False
-
         st.rerun()
 
     # ✅ Restore original printing format for channel info

@@ -79,6 +79,10 @@ async def fetch_participants_via_messages(client, group_name, start_date=None, e
                 all_messages.append(message)
             offset_id = messages[-1].id
             time.sleep(1)
+            # Check if a cancel flag was set:
+            if st.session_state.get("cancel_fetch", False):
+                break
+                
         print(f"Fetched {len(all_messages)} messages from {group_name}")
 
         # Extract unique participants from message senders

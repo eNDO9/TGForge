@@ -306,6 +306,10 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
             multi = aggregated[aggregated["Group Count"] >= 2]
             st.dataframe(multi[["User ID", "Username", "Group Count", "Groups"]])
 
+        if "participants_group_counts" in st.session_state:
+            st.write("#### Participant Count Comparison:")
+            for group, counts in st.session_state.participants_group_counts.items():
+                st.write(f"{group}: {counts[0]} (reported by channel info) | {counts[1]} (collected via messages)")
         # Optionally, write a summary below the tabs
         st.write("Total unique participants collected:", len(aggregated))
 

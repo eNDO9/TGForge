@@ -268,12 +268,12 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
         st.write("### Participants (Aggregated by User)")
         df_participants = pd.DataFrame(st.session_state.participants_data)
 
-        # Define the user columns (adjust these based on your data)
+        # Define user columns (adjust these if needed)
         user_cols = ["User ID", "Username", "First Name", "Last Name", "Status"]
         # Assume all other columns are group membership flags.
         group_cols = [col for col in df_participants.columns if col not in user_cols]
 
-        # Group by "User ID": take the first occurrence for standard columns and max for group flags.
+        # Group by "User ID": for standard columns take the first occurrence; for group flags take the max.
         aggregated = df_participants.groupby("User ID").agg({
             "Username": "first",
             "First Name": "first",
@@ -282,23 +282,23 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
             **{col: "max" for col in group_cols}
         }).reset_index()
 
-        # Calculate how many groups the user is active in.
+        # Convert group membership columns to numeric before summing.
+        aggregated[group_cols] = aggregated[group_cols].fillna(0).apply(pd.to_numeric, errors='coerce').fillna(0).astype(int)
+
+        # Calculate how many groups each user is active in.
         aggregated["Group Count"] = aggregated[group_cols].sum(axis=1)
-        # Create a comma-separated list of groups for each user.
+        # Create a comma-separated list of groups where the user is active.
         aggregated["Groups"] = aggregated[group_cols].apply(
             lambda row: ", ".join([col for col in group_cols if row[col] == 1]), axis=1
         )
 
-        # Create tabs: one for all aggregated participants, one for users active in 2+ groups.
+        # Create tabs: one showing all aggregated participants, one showing users active in 2+ groups.
         tabs = st.tabs(["All Participants", "Active in ≥ 2 Chats"])
-
         with tabs[0]:
             st.dataframe(aggregated)
-
         with tabs[1]:
             multi = aggregated[aggregated["Group Count"] >= 2]
             st.dataframe(multi[["User ID", "Username", "Group Count", "Groups"]])
-
     
     # ✅ Define color palette
     COLOR_PALETTE = ["#C7074D", "#B4B2B1", "#4C4193", "#0068B2", "#E76863", "#5C6771"]

@@ -266,17 +266,17 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
         st.write("### Participants (Aggregated by User)")
         df_participants = pd.DataFrame(st.session_state.participants_data)
 
-        # Define columns that are standard user info.
+        # Define user info columns (adjust as needed)
         user_cols = [
             "User ID", "Deleted", "Is Bot", "Verified", "Restricted", "Scam", "Fake", 
             "Premium", "Access Hash", "First Name", "Last Name", "Username", "Phone", 
             "Status", "Timezone Info", "Restriction Reason", "Language Code", "Last Seen", 
             "Profile Picture DC ID", "Profile Picture Photo ID"
         ]
-        # All other columns will be considered group membership flags.
+        # Treat any columns not in user_cols as group membership flags.
         group_cols = [col for col in df_participants.columns if col not in user_cols]
 
-        # Aggregate by User ID: for standard info take the first value; for group flags, take the max.
+        # Aggregate by User ID.
         aggregated = df_participants.groupby("User ID").agg({
             "Username": "first",
             "First Name": "first",
@@ -285,7 +285,6 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
             **{col: "max" for col in group_cols}
         }).reset_index()
 
-        # Convert group membership columns to numeric and calculate Group Count and Groups list.
         if group_cols:
             aggregated[group_cols] = aggregated[group_cols].fillna(0).apply(pd.to_numeric, errors='coerce').fillna(0).astype(int)
             aggregated["Group Count"] = aggregated[group_cols].sum(axis=1)
@@ -296,26 +295,27 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
             aggregated["Group Count"] = 0
             aggregated["Groups"] = ""
 
-        # Create tabs for display.
+        # Create three tabs: All Participants, Active in ≥ 2 Chats, and Most Active Posters.
         tabs = st.tabs(["All Participants", "Active in ≥ 2 Chats", "Most Active Posters"])
-
         with tabs[0]:
             st.dataframe(aggregated)
-
         with tabs[1]:
             multi = aggregated[aggregated["Group Count"] >= 2]
             st.dataframe(multi[["User ID", "Username", "Group Count", "Groups"]])
-
         with tabs[2]:
-            if "messages_data" in st.session_state and not pd.DataFrame(st.session_state.messages_data).empty:
-                df_msg = pd.DataFrame(st.session_state.messages_data)
-                active = df_msg.groupby(["Sender User ID", "Sender Username"]).agg({
-                    "Message ID": "count",
-                    "Channel": lambda x: ", ".join(sorted(set(x)))
-                }).reset_index().rename(columns={"Message ID": "Message Count"})
-                st.dataframe(active.sort_values(by="Message Count", ascending=False))
+            if "participants_active_data" in st.session_state and not pd.DataFrame(st.session_state.participants_active_data).empty:
+                df_active = pd.DataFrame(st.session_state.participants_active_data)
+                # Sort by message count descending.
+                df_active = df_active.sort_values(by="Message Count", ascending=False)
+                st.dataframe(df_active)
             else:
-                st.write("No message data available to calculate active posters. Please fetch messages or use the 'Via Messages' method for participants.")
+                st.write("No active poster data available.")
+
+        st.write("#### Participant Count Comparison:")
+        if "participants_group_counts" in st.session_state:
+            for group, counts in st.session_state.participants_group_counts.items():
+                st.write(f"{group}: {counts[0]} (reported by channel info) | {counts[1]} (collected via messages)")
+
 
         if "participants_group_counts" in st.session_state:
             st.write("#### Participant Count Comparison:")
@@ -437,41 +437,38 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
             file_name="forwards_analysis.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         )
-    elif "participants_data" in st.session_state and not pd.DataFrame(st.session_state.participants_data).empty:
-        df_participants = pd.DataFrame(st.session_state.participants_data)
-        # (Recreate the aggregated view as above)
-        user_cols = [
-            "User ID", "Deleted", "Is Bot", "Verified", "Restricted", "Scam", "Fake", 
-            "Premium", "Access Hash", "First Name", "Last Name", "Username", "Phone", 
-            "Status", "Timezone Info", "Restriction Reason", "Language Code", "Last Seen", 
-            "Profile Picture DC ID", "Profile Picture Photo ID"
-        ]
-        group_cols = [col for col in df_participants.columns if col not in user_cols]
-        aggregated = df_participants.groupby("User ID").agg({
-            "Username": "first",
-            "First Name": "first",
-            "Last Name": "first",
-            "Status": "first",
-            **{col: "max" for col in group_cols}
-        }).reset_index()
-        if group_cols:
-            aggregated[group_cols] = aggregated[group_cols].fillna(0).apply(pd.to_numeric, errors='coerce').fillna(0).astype(int)
-            aggregated["Group Count"] = aggregated[group_cols].sum(axis=1)
-            aggregated["Groups"] = aggregated[group_cols].apply(
-                lambda row: ", ".join([col for col in group_cols if row[col] == 1]), axis=1
-            )
-        else:
-            aggregated["Group Count"] = 0
-            aggregated["Groups"] = ""
+    elif fetch_option == "Participants":
+        if st.button("Fetch Participants"):
+            groups = [g.strip() for g in channel_input.split(",") if g.strip()]
+            if not groups:
+                st.error("Please enter at least one valid group name.")
+            else:
+                if participant_method == "Default":
+                    (st.session_state.participants_data, 
+                     st.session_state.participants_reported,
+                     st.session_state.participants_fetched,
+                     st.session_state.participants_group_counts,
+                     st.session_state.participants_active_data) = st.session_state.event_loop.run_until_complete(
+                        fetch_participants(st.session_state.client, groups, method="default")
+                    )
+                else:
+                    (st.session_state.participants_data, 
+                     st.session_state.participants_reported,
+                     st.session_state.participants_fetched,
+                     st.session_state.participants_group_counts,
+                     st.session_state.participants_active_data) = st.session_state.event_loop.run_until_complete(
+                        fetch_participants(st.session_state.client, groups, method="messages", start_date=start_date, end_date=end_date)
+                    )
 
         output_xlsx_participants = io.BytesIO()
-        with pd.ExcelWriter(output_xlsx_participants, engine="openpyxl") as writer:
-            df_participants.to_excel(writer, sheet_name="Raw Participants", index=False)
-            aggregated.to_excel(writer, sheet_name="Aggregated Participants", index=False)
-        output_xlsx_participants.seek(0)
-        st.download_button(
-            "📥 Download Participants Data (Excel)",
-            data=output_xlsx_participants.getvalue(),
-            file_name="participants_analysis.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
+            with pd.ExcelWriter(output_xlsx_participants, engine="openpyxl") as writer:
+                df_participants.to_excel(writer, sheet_name="Raw Participants", index=False)
+                aggregated.to_excel(writer, sheet_name="Aggregated Participants", index=False)
+                df_active.to_excel(writer, sheet_name="Most Active Posters", index=False)
+            output_xlsx_participants.seek(0)
+            st.download_button(
+                "📥 Download Participants Data (Excel)",
+                data=output_xlsx_participants.getvalue(),
+                file_name="participants_analysis.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )

@@ -54,7 +54,9 @@ async def fetch_participants_via_messages(client, group_name, start_date=None, e
     """
     Fetch participants from a group by collecting messages and extracting unique senders.
     Optionally filter messages by date range.
-    Returns a DataFrame with detailed participant information.
+    Returns two DataFrames:
+      - unique_df: Unique participant info.
+      - active_df: Active poster counts (message count and channels).
     """
     try:
         print(f"Fetching messages for group {group_name} for participant extraction...")
@@ -67,7 +69,6 @@ async def fetch_participants_via_messages(client, group_name, start_date=None, e
                 print("No more messages in batch.")
                 break
             print(f"Fetched {len(messages)} messages in batch for group {group_name}.")
-            # Check the date of the oldest message in this batch.
             if start_date and messages[-1].date:
                 last_msg_date = messages[-1].date.replace(tzinfo=None).date()
                 print(f"Batch oldest message date: {last_msg_date} | Start Date: {start_date}")
@@ -89,45 +90,59 @@ async def fetch_participants_via_messages(client, group_name, start_date=None, e
                 break
         print(f"Total messages collected for group {group_name}: {len(all_messages)}")
         
-        # Extract unique participants with detailed info
+        # Extract unique participant info and also count message activity.
         participants = {}
+        active_counts = {}
         for message in all_messages:
             if message.sender:
-                user = message.sender
-                if user.id not in participants:
-                    participants[user.id] = {
-                        "User ID": user.id,
-                        "Deleted": user.deleted if hasattr(user, "deleted") else False,
-                        "Is Bot": user.bot if hasattr(user, "bot") else False,
-                        "Verified": user.verified if hasattr(user, "verified") else False,
-                        "Restricted": user.restricted if hasattr(user, "restricted") else False,
-                        "Scam": user.scam if hasattr(user, "scam") else False,
-                        "Fake": user.fake if hasattr(user, "fake") else False,
-                        "Premium": getattr(user, "premium", False),
-                        "Access Hash": user.access_hash,
-                        "First Name": user.first_name if user.first_name else "No First Name",
-                        "Last Name": user.last_name if user.last_name else "No Last Name",
-                        "Username": user.username if user.username else "No Username",
-                        "Phone": user.phone if user.phone else "No Phone",
-                        "Status": str(user.status) if user.status else "Not Available",
+                uid = message.sender.id
+                if uid not in participants:
+                    participants[uid] = {
+                        "User ID": uid,
+                        "Username": message.sender.username if message.sender.username else "No Username",
+                        "First Name": message.sender.first_name if message.sender.first_name else "No First Name",
+                        "Last Name": message.sender.last_name if message.sender.last_name else "No Last Name",
                     }
-        print(f"Extracted {len(participants)} unique participants from group {group_name}")
-        df = pd.DataFrame(list(participants.values()))
-        return df
+                    active_counts[uid] = {"Message Count": 0, "Channels": set()}
+                active_counts[uid]["Message Count"] += 1
+                # Determine which channel: use group_name as fallback.
+                channel_for_msg = group_name
+                if hasattr(message, "chat") and message.chat and hasattr(message.chat, "username") and message.chat.username:
+                    channel_for_msg = message.chat.username
+                active_counts[uid]["Channels"].add(channel_for_msg)
+        unique_df = pd.DataFrame(list(participants.values()))
+        
+        # Build active poster DataFrame.
+        active_data = []
+        for uid, info in active_counts.items():
+            active_data.append({
+                "User ID": uid,
+                "Message Count": info["Message Count"],
+                "Channels": ", ".join(sorted(info["Channels"]))
+            })
+        active_df = pd.DataFrame(active_data)
+        print(f"Extracted {len(unique_df)} unique participants and active counts from group {group_name}")
+        return unique_df, active_df
     except Exception as e:
         print(f"Error fetching participants via messages for {group_name}: {e}")
-        return pd.DataFrame()
+        return pd.DataFrame(), pd.DataFrame()
 
 async def fetch_participants(client, group_list, method="default", start_date=None, end_date=None):
     """
     Fetch participants for each group in group_list.
-    - method: "default" uses a direct API request, "messages" extracts from messages.
-    Returns a unified DataFrame, total reported count, total fetched count, and a dictionary mapping each group to (reported_count, fetched_count).
+    - method: "default" uses a direct API request; "messages" extracts from messages.
+    Returns:
+      - unified_df: unified unique participant DataFrame,
+      - total_reported: sum of reported counts (for default method),
+      - total_fetched: total number of participants fetched,
+      - group_counts: dictionary mapping each group to (reported_count, fetched_count),
+      - active_df: unified active poster DataFrame (only for messages method; for default, it can be empty).
     """
     all_dfs = []
+    active_dfs = []
     total_reported = 0
     total_fetched = 0
-    group_counts = {}  # {group_name: (reported_count, fetched_count)}
+    group_counts = {}  # {group: (reported_count, fetched_count)}
     for group in group_list:
         if method == "default":
             df, reported_count = await fetch_default_participants(client, group)
@@ -138,14 +153,19 @@ async def fetch_participants(client, group_list, method="default", start_date=No
             if not df.empty:
                 all_dfs.append(df)
         elif method == "messages":
-            df = await fetch_participants_via_messages(client, group, start_date, end_date)
-            fetched_count = len(df)
+            unique_df, active_df = await fetch_participants_via_messages(client, group, start_date, end_date)
+            fetched_count = len(unique_df)
             total_fetched += fetched_count
             group_counts[group] = ("Not Available", fetched_count)
-            if not df.empty:
-                df[group] = 1  # Mark membership
-                all_dfs.append(df)
-    if not all_dfs:
-        return pd.DataFrame(), total_reported, total_fetched, group_counts
-    unified_df = pd.concat(all_dfs, ignore_index=True)
-    return unified_df, total_reported, total_fetched, group_counts
+            if not unique_df.empty:
+                unique_df[group] = 1  # Mark membership
+                all_dfs.append(unique_df)
+            if not active_df.empty:
+                active_dfs.append(active_df)
+    unified_df = pd.DataFrame()
+    if all_dfs:
+        unified_df = pd.concat(all_dfs, ignore_index=True)
+    unified_active = pd.DataFrame()
+    if active_dfs:
+        unified_active = pd.concat(active_dfs, ignore_index=True)
+    return unified_df, total_reported, total_fetched, group_counts, unified_active

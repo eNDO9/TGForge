@@ -107,6 +107,7 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
     channel_input = st.text_area("Enter Telegram channel usernames (comma-separated):", "epicdangerschat")
 
     # For Messages, Forwards, and Participants, allow optional date range filtering
+    participant_method = "Default"
     start_date = end_date = None
     if fetch_option in ["Messages", "Forwards", "Participants"]:
         if fetch_option == "Participants":

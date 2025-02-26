@@ -147,19 +147,20 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
                 st.error("Please enter at least one valid group name.")
             else:
                 if participant_method == "Default":
-                    # Fetch participants using the default method
                     (st.session_state.participants_data, 
                      st.session_state.participants_reported,
-                     st.session_state.participants_fetched) = st.session_state.event_loop.run_until_complete(
+                     st.session_state.participants_fetched,
+                     st.session_state.participants_group_counts) = st.session_state.event_loop.run_until_complete(
                         fetch_participants(st.session_state.client, groups, method="default")
                     )
                 else:
-                    # Fetch participants via messages (using date range if provided)
                     (st.session_state.participants_data, 
                      st.session_state.participants_reported,
-                     st.session_state.participants_fetched) = st.session_state.event_loop.run_until_complete(
+                     st.session_state.participants_fetched,
+                     st.session_state.participants_group_counts) = st.session_state.event_loop.run_until_complete(
                         fetch_participants(st.session_state.client, groups, method="messages", start_date=start_date, end_date=end_date)
                     )
+
     
     # --- Refresh Button (Clears Display But Keeps Data) ---
     if st.button("🔄 Refresh / Cancel"):
@@ -262,8 +263,16 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
         df_hashtags = pd.DataFrame(st.session_state.top_hashtags)
         st.write("### Top Hashtags")
         st.data_editor(df_hashtags.head(25))
-        
-
+    
+    if "participants_data" in st.session_state and not pd.DataFrame(st.session_state.participants_data).empty:
+        st.write("### Participants")
+        df_participants = pd.DataFrame(st.session_state.participants_data)
+        st.dataframe(df_participants.head(25))
+        if "participants_group_counts" in st.session_state:
+            st.write("#### Participant Count Comparison:")
+            for group, counts in st.session_state.participants_group_counts.items():
+                st.write(f"{group}: {counts[0]} (reported by channel info) | {counts[1]} (collected via messages)")
+    
     # ✅ Define color palette
     COLOR_PALETTE = ["#C7074D", "#B4B2B1", "#4C4193", "#0068B2", "#E76863", "#5C6771"]
 

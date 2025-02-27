@@ -461,14 +461,14 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
                     )
 
         output_xlsx_participants = io.BytesIO()
-        with pd.ExcelWriter(output_xlsx_participants, engine="openpyxl") as writer:
-            df_participants.to_excel(writer, sheet_name="Raw Participants", index=False)
-            aggregated.to_excel(writer, sheet_name="Aggregated Participants", index=False)
-            df_active.to_excel(writer, sheet_name="Most Active Posters", index=False)
-        output_xlsx_participants.seek(0)
-        st.download_button(
-            "📥 Download Participants Data (Excel)",
-            data=output_xlsx_participants.getvalue(),
-            file_name="participants_analysis.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
+            with pd.ExcelWriter(output_xlsx_participants, engine="openpyxl") as writer:
+                df_participants.to_excel(writer, sheet_name="Raw Participants", index=False)
+                aggregated.to_excel(writer, sheet_name="Aggregated Participants", index=False)
+                df_active.to_excel(writer, sheet_name="Most Active Posters", index=False)
+            output_xlsx_participants.seek(0)
+            st.download_button(
+                "📥 Download Participants Data (Excel)",
+                data=output_xlsx_participants.getvalue(),
+                file_name="participants_analysis.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )

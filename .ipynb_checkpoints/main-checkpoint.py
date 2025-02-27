@@ -266,17 +266,17 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
         st.write("### Participants (Aggregated by User)")
         df_participants = pd.DataFrame(st.session_state.participants_data)
 
-        # Define columns that are standard user info.
+        # Explicitly define known user info columns.
         user_cols = [
             "User ID", "Deleted", "Is Bot", "Verified", "Restricted", "Scam", "Fake", 
             "Premium", "Access Hash", "First Name", "Last Name", "Username", "Phone", 
             "Status", "Timezone Info", "Restriction Reason", "Language Code", "Last Seen", 
             "Profile Picture DC ID", "Profile Picture Photo ID"
         ]
-        # All other columns will be considered group membership flags.
+        # Assume that any column not in user_cols is a group membership flag.
         group_cols = [col for col in df_participants.columns if col not in user_cols]
 
-        # Aggregate by User ID: for standard info take the first value; for group flags, take the max.
+        # Group by "User ID": for user info take the first value; for group flags, take max.
         aggregated = df_participants.groupby("User ID").agg({
             "Username": "first",
             "First Name": "first",
@@ -285,10 +285,12 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
             **{col: "max" for col in group_cols}
         }).reset_index()
 
-        # Convert group membership columns to numeric and calculate Group Count and Groups list.
+        # Convert group membership columns to numeric (if they aren't already)
         if group_cols:
             aggregated[group_cols] = aggregated[group_cols].fillna(0).apply(pd.to_numeric, errors='coerce').fillna(0).astype(int)
+            # Calculate the number of groups for each user.
             aggregated["Group Count"] = aggregated[group_cols].sum(axis=1)
+            # Build a comma‑separated list of groups for each user.
             aggregated["Groups"] = aggregated[group_cols].apply(
                 lambda row: ", ".join([col for col in group_cols if row[col] == 1]), axis=1
             )
@@ -296,31 +298,13 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
             aggregated["Group Count"] = 0
             aggregated["Groups"] = ""
 
-        # Create tabs for display.
-        tabs = st.tabs(["All Participants", "Active in ≥ 2 Chats", "Most Active Posters"])
-
+        # Create two tabs: one with all aggregated participants and one for those in 2 or more groups.
+        tabs = st.tabs(["All Participants", "Active in ≥ 2 Chats"])
         with tabs[0]:
             st.dataframe(aggregated)
-
         with tabs[1]:
             multi = aggregated[aggregated["Group Count"] >= 2]
             st.dataframe(multi[["User ID", "Username", "Group Count", "Groups"]])
-
-        with tabs[2]:
-            # Use messages_data to compute active poster stats.
-            if "messages_data" in st.session_state:
-                df_msg = pd.DataFrame(st.session_state.messages_data)
-                if not df_msg.empty and "Sender User ID" in df_msg.columns:
-                    active = df_msg.groupby(["Sender User ID", "Sender Username"]).agg({
-                        "Message ID": "count",
-                        "Channel": lambda x: ", ".join(sorted(set(x)))
-                    }).reset_index().rename(columns={"Message ID": "Message Count"})
-                    st.dataframe(active.sort_values(by="Message Count", ascending=False))
-                else:
-                    st.write("No message data available for active posters.")
-            else:
-                st.write("No message data available for active posters.")
-
 
         if "participants_group_counts" in st.session_state:
             st.write("#### Participant Count Comparison:")

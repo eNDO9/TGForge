@@ -50,6 +50,10 @@ async def fetch_default_participants(client, group_name):
         print(f"Error fetching participants for {group_name}: {e}")
         return pd.DataFrame(), 0
 
+import pandas as pd
+import time
+import streamlit as st
+
 async def fetch_participants_via_messages(client, group_name, start_date=None, end_date=None):
     """
     Fetch participants from a group by collecting messages and extracting unique senders.
@@ -57,23 +61,27 @@ async def fetch_participants_via_messages(client, group_name, start_date=None, e
     Returns a DataFrame with detailed participant information.
     """
     try:
-        print(f"Fetching messages for group {group_name} for participant extraction...")
+        st.write(f"Fetching messages for group '{group_name}' for participant extraction...")
         all_messages = []
         offset_id = 0
         limit = 1000
         while True:
             messages = await client.get_messages(group_name, limit=limit, offset_id=offset_id)
             if not messages:
-                print("No more messages in batch.")
+                st.write("No more messages in batch.")
                 break
-            print(f"Fetched {len(messages)} messages in batch for group {group_name}.")
-            # Check the date of the oldest message in this batch.
+            st.write(f"Fetched {len(messages)} messages in current batch.")
+            
+            # Debug: show the oldest message date in this batch
             if start_date and messages[-1].date:
                 last_msg_date = messages[-1].date.replace(tzinfo=None).date()
-                print(f"Batch oldest message date: {last_msg_date} | Start Date: {start_date}")
-                if last_msg_date < start_date:
-                    print("Oldest message in batch is before start_date; stopping fetch.")
-                    break
+                st.write(f"Batch oldest message date: {last_msg_date} | Start Date: {start_date}")
+                # For debugging, comment out the early-exit check:
+                # if last_msg_date < start_date:
+                #     st.write("Oldest message in batch is before start_date; stopping fetch.")
+                #     break
+            
+            # Process messages in this batch, filtering by date range.
             for message in messages:
                 if message.date:
                     msg_date = message.date.replace(tzinfo=None).date()
@@ -82,14 +90,17 @@ async def fetch_participants_via_messages(client, group_name, start_date=None, e
                     if end_date and msg_date > end_date:
                         continue
                 all_messages.append(message)
+            
             offset_id = messages[-1].id
             time.sleep(1)
+            
             if st.session_state.get("cancel_fetch", False):
-                print("Fetch participants via messages cancelled by user.")
+                st.write("Fetch participants via messages cancelled by user.")
                 break
-        print(f"Total messages collected for group {group_name}: {len(all_messages)}")
         
-        # Extract unique participants with detailed info
+        st.write(f"Total messages collected for group '{group_name}': {len(all_messages)}")
+        
+        # Extract unique participants from the collected messages.
         participants = {}
         for message in all_messages:
             if message.sender:
@@ -111,11 +122,11 @@ async def fetch_participants_via_messages(client, group_name, start_date=None, e
                         "Phone": user.phone if user.phone else "No Phone",
                         "Status": str(user.status) if user.status else "Not Available",
                     }
-        print(f"Extracted {len(participants)} unique participants from group {group_name}")
+        st.write(f"Extracted {len(participants)} unique participants from group '{group_name}'")
         df = pd.DataFrame(list(participants.values()))
         return df
     except Exception as e:
-        print(f"Error fetching participants via messages for {group_name}: {e}")
+        st.write(f"Error fetching participants via messages for {group_name}: {e}")
         return pd.DataFrame()
 
 async def fetch_participants(client, group_list, method="default", start_date=None, end_date=None):

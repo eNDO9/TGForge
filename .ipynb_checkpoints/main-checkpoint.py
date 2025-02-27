@@ -307,15 +307,20 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
             st.dataframe(multi[["User ID", "Username", "Group Count", "Groups"]])
 
         with tabs[2]:
-            if "messages_data" in st.session_state and not pd.DataFrame(st.session_state.messages_data).empty:
+            # Use messages_data to compute active poster stats.
+            if "messages_data" in st.session_state:
                 df_msg = pd.DataFrame(st.session_state.messages_data)
-                active = df_msg.groupby(["Sender User ID", "Sender Username"]).agg({
-                    "Message ID": "count",
-                    "Channel": lambda x: ", ".join(sorted(set(x)))
-                }).reset_index().rename(columns={"Message ID": "Message Count"})
-                st.dataframe(active.sort_values(by="Message Count", ascending=False))
+                if not df_msg.empty and "Sender User ID" in df_msg.columns:
+                    active = df_msg.groupby(["Sender User ID", "Sender Username"]).agg({
+                        "Message ID": "count",
+                        "Channel": lambda x: ", ".join(sorted(set(x)))
+                    }).reset_index().rename(columns={"Message ID": "Message Count"})
+                    st.dataframe(active.sort_values(by="Message Count", ascending=False))
+                else:
+                    st.write("No message data available for active posters.")
             else:
-                st.write("No message data available to calculate active posters. Please fetch messages or use the 'Via Messages' method for participants.")
+                st.write("No message data available for active posters.")
+
 
         if "participants_group_counts" in st.session_state:
             st.write("#### Participant Count Comparison:")

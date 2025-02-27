@@ -62,61 +62,68 @@ async def fetch_participants_via_messages(client, group_name, start_date=None, e
         all_messages = []
         offset_id = 0
         limit = 1000
-        
-        while True:
-            # Use offset_date if start_date is provided
-            if start_date:
-                messages = await client.get_messages(group_name, limit=limit, offset_date=start_date, offset_id=offset_id)
-            else:
-                messages = await client.get_messages(group_name, limit=limit, offset_id=offset_id)
-                
+        stop_fetching = False
+
+        while not stop_fetching:
+            messages = await client.get_messages(group_name, limit=limit, offset_id=offset_id)
             if not messages:
                 st.write("No more messages in batch.")
                 break
 
             st.write(f"Fetched {len(messages)} messages in current batch.")
-            
-            # For additional filtering (e.g. by end_date) you can still do this:
+
             for message in messages:
-                if message.date:
-                    msg_date = message.date.replace(tzinfo=None).date()
-                    if end_date and msg_date > end_date:
-                        continue
+                if not message.date:
+                    continue
+
+                # Remove timezone info for comparison
+                msg_date = message.date.replace(tzinfo=None).date()
+
+                # Skip messages that are newer than the end_date if provided
+                if end_date and msg_date > end_date:
+                    continue
+
+                # If the message is older than the start_date, stop processing further.
+                if start_date and msg_date < start_date:
+                    stop_fetching = True
+                    break
+
                 all_messages.append(message)
-            
+
+            if stop_fetching:
+                st.write("Reached messages older than start_date. Stopping further fetch.")
+                break
+
             offset_id = messages[-1].id
             time.sleep(1)
-            
+
             if st.session_state.get("cancel_fetch", False):
                 st.write("Fetch participants via messages cancelled by user.")
                 break
-        
+
         st.write(f"Total messages collected for group '{group_name}': {len(all_messages)}")
-        
+
         # Extract unique participants from the collected messages.
         from telethon.tl.types import User
         participants = {}
         for message in all_messages:
-            if message.sender:
-                # Ensure we only process actual User objects.
-                if not isinstance(message.sender, User):
-                    continue
+            if message.sender and isinstance(message.sender, User):
                 user = message.sender
                 if user.id not in participants:
                     participants[user.id] = {
                         "User ID": user.id,
-                        "Deleted": user.deleted if hasattr(user, "deleted") else False,
-                        "Is Bot": user.bot if hasattr(user, "bot") else False,
-                        "Verified": user.verified if hasattr(user, "verified") else False,
-                        "Restricted": user.restricted if hasattr(user, "restricted") else False,
-                        "Scam": user.scam if hasattr(user, "scam") else False,
-                        "Fake": user.fake if hasattr(user, "fake") else False,
+                        "Deleted": getattr(user, "deleted", False),
+                        "Is Bot": getattr(user, "bot", False),
+                        "Verified": getattr(user, "verified", False),
+                        "Restricted": getattr(user, "restricted", False),
+                        "Scam": getattr(user, "scam", False),
+                        "Fake": getattr(user, "fake", False),
                         "Premium": getattr(user, "premium", False),
                         "Access Hash": user.access_hash,
-                        "First Name": user.first_name if user.first_name else "No First Name",
-                        "Last Name": user.last_name if user.last_name else "No Last Name",
-                        "Username": user.username if user.username else "No Username",
-                        "Phone": user.phone if user.phone else "No Phone",
+                        "First Name": user.first_name or "No First Name",
+                        "Last Name": user.last_name or "No Last Name",
+                        "Username": user.username or "No Username",
+                        "Phone": user.phone or "No Phone",
                         "Status": str(user.status) if user.status else "Not Available",
                     }
         st.write(f"Extracted {len(participants)} unique participants from group '{group_name}'")
@@ -125,6 +132,7 @@ async def fetch_participants_via_messages(client, group_name, start_date=None, e
     except Exception as e:
         st.write(f"Error fetching participants via messages for {group_name}: {e}")
         return pd.DataFrame()
+
 
 
 async def fetch_participants(client, group_list, method="default", start_date=None, end_date=None):

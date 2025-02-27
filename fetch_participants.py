@@ -2,6 +2,8 @@ import pandas as pd
 import time
 from telethon import functions
 from telethon.errors import FloodWaitError, RpcCallFailError
+from telethon.tl.types import User
+
 import streamlit as st
 
 async def fetch_default_participants(client, group_name):
@@ -55,11 +57,6 @@ import time
 import streamlit as st
 
 async def fetch_participants_via_messages(client, group_name, start_date=None, end_date=None):
-    """
-    Fetch participants from a group by collecting messages and extracting unique senders.
-    Optionally filter messages by date range.
-    Returns a DataFrame with detailed participant information.
-    """
     try:
         st.write(f"Fetching messages for group '{group_name}' for participant extraction...")
         all_messages = []
@@ -72,16 +69,15 @@ async def fetch_participants_via_messages(client, group_name, start_date=None, e
                 break
             st.write(f"Fetched {len(messages)} messages in current batch.")
             
-            # Debug: show the oldest message date in this batch
+            # Check the date of the oldest message in this batch.
             if start_date and messages[-1].date:
                 last_msg_date = messages[-1].date.replace(tzinfo=None).date()
                 st.write(f"Batch oldest message date: {last_msg_date} | Start Date: {start_date}")
-                # For debugging, comment out the early-exit check:
-                # if last_msg_date < start_date:
-                #     st.write("Oldest message in batch is before start_date; stopping fetch.")
-                #     break
+                # If the oldest message in the batch is before the start date, stop fetching.
+                if last_msg_date < start_date:
+                    st.write("Oldest message in batch is before start_date; stopping fetch.")
+                    break
             
-            # Process messages in this batch, filtering by date range.
             for message in messages:
                 if message.date:
                     msg_date = message.date.replace(tzinfo=None).date()
@@ -90,20 +86,19 @@ async def fetch_participants_via_messages(client, group_name, start_date=None, e
                     if end_date and msg_date > end_date:
                         continue
                 all_messages.append(message)
-            
             offset_id = messages[-1].id
             time.sleep(1)
-            
             if st.session_state.get("cancel_fetch", False):
                 st.write("Fetch participants via messages cancelled by user.")
                 break
-        
         st.write(f"Total messages collected for group '{group_name}': {len(all_messages)}")
         
         # Extract unique participants from the collected messages.
         participants = {}
         for message in all_messages:
             if message.sender:
+                if not isinstance(message.sender, User):
+                    continue  # skip if sender is not a user
                 user = message.sender
                 if user.id not in participants:
                     participants[user.id] = {
@@ -122,9 +117,11 @@ async def fetch_participants_via_messages(client, group_name, start_date=None, e
                         "Phone": user.phone if user.phone else "No Phone",
                         "Status": str(user.status) if user.status else "Not Available",
                     }
+        
         st.write(f"Extracted {len(participants)} unique participants from group '{group_name}'")
         df = pd.DataFrame(list(participants.values()))
         return df
+    
     except Exception as e:
         st.write(f"Error fetching participants via messages for {group_name}: {e}")
         return pd.DataFrame()

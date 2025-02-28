@@ -161,7 +161,6 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
                      st.session_state.participants_group_counts) = st.session_state.event_loop.run_until_complete(
                         fetch_participants(st.session_state.client, groups, method="messages", start_date=start_date, end_date=end_date)
                     )
-
     
     # --- Refresh Button (Clears Display But Keeps Data) ---
     if st.button("🔄 Refresh / Cancel"):

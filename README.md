@@ -1,6 +1,6 @@
 # TGForge
 
-TGForge is an interactive data extraction and analysis tool built using Streamlit and Telegram’s official API. It allows users to collect, analyze, and export data from one or more public Telegram channels or groups. With TGForge, you can:
+[TGForge](https://isd-tgforge.streamlit.app/) is an interactive data extraction and analysis tool built using Streamlit and Telegram’s official API. It allows users to collect, analyze, and export data from one or more public Telegram channels or groups. With TGForge, you can:
 
 - Retrieve Channel Information: Get basic details about channels—including alternative names, channel type, creation date, and reported member counts.
 - Collect Messages: Fetch all messages from selected channels or groups, with an option to filter by specific date ranges. Download the data as CSV or Excel for further analysis.

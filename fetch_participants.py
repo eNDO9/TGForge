@@ -55,6 +55,7 @@ async def fetch_participants_via_messages(client, group_name, start_date=None, e
     """
     Fetch participants from a group by collecting messages and extracting unique senders.
     Optionally filter messages by date range.
+    Additionally, supplement the list with API-retrieved members, avoiding duplicates.
     Returns a DataFrame with detailed participant information.
     """
     try:
@@ -64,6 +65,7 @@ async def fetch_participants_via_messages(client, group_name, start_date=None, e
         limit = 1000
         stop_fetching = False
 
+        # Collect messages within the date range
         while not stop_fetching:
             messages = await client.get_messages(group_name, limit=limit, offset_id=offset_id)
             if not messages:
@@ -126,14 +128,24 @@ async def fetch_participants_via_messages(client, group_name, start_date=None, e
                         "Phone": user.phone or "No Phone",
                         "Status": str(user.status) if user.status else "Not Available",
                     }
-        st.write(f"Extracted {len(participants)} unique participants from group '{group_name}'")
-        df = pd.DataFrame(list(participants.values()))
-        return df
+
+        st.write(f"Extracted {len(participants)} unique participants from messages for group '{group_name}'")
+
+        # Supplement with participants retrievable via the API.
+        # Note: Ensure that fetch_default_participants is imported from its module.
+        from fetch_participants import fetch_default_participants
+        api_df, reported_count = await fetch_default_participants(client, group_name)
+        if not api_df.empty:
+            for _, row in api_df.iterrows():
+                user_id = row.get("User ID")
+                if user_id not in participants:
+                    participants[user_id] = row.to_dict()
+
+        st.write(f"Total unique participants after merging with API data: {len(participants)}")
+        return pd.DataFrame(list(participants.values()))
     except Exception as e:
         st.write(f"Error fetching participants via messages for {group_name}: {e}")
         return pd.DataFrame()
-
-
 
 async def fetch_participants(client, group_list, method="default", start_date=None, end_date=None):
     """

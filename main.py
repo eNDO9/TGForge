@@ -58,6 +58,7 @@ if st.session_state.auth_step == 1:
 
                     st.session_state.event_loop.run_until_complete(connect_and_send_code())
                     st.session_state.auth_step = 2  
+                    st.rerun()
 
                 except PhoneNumberInvalidError:
                     st.error("Invalid phone number. Please check and try again.")
@@ -85,6 +86,7 @@ elif st.session_state.auth_step == 2:
                 st.session_state.auth_step = 3  
                 st.session_state.authenticated = True
                 st.success("Authentication successful!")
+                st.rerun()
 
             except PhoneCodeInvalidError:
                 st.error("Invalid verification code. Please try again.")

@@ -20,7 +20,7 @@ Telegram API Credentials:
 Account Considerations:
 - You may use a burner account; however, note that new accounts sometimes cannot obtain API credentials.
 
-### Step 1: Enter Telegram API Credentials
+### **Step 1: Enter Telegram API Credentials**
 **Input Credentials:**
 - Enter your API ID, API Hash, and phone number in the provided fields.
 - Click the Next button.
@@ -36,7 +36,7 @@ Issues:
 - Input the received verification code in the app.
 - A notification may appear on your phone indicating an attempted login. Rest assured, this is only for authentication purposes and cannot be used to access your account.
 
-****Authenticate****
+**Authenticate**
 - **Note:** Once authenticated, the app will automatically advance to Step 3.
 
 ### Step 3: Using TGForge

@@ -9,8 +9,6 @@ TGForge is an interactive data extraction and analysis tool built using Streamli
 
 This tool was created by and for the Institute for Strategic Dialogue.
 
-It was developed by Nathan Doctor as a part of the Institute for Strategic Dialogue.
-
 Special thanks to the Streamlit and Telethon for their support.
 
 For additional documentation, see the guide - https://github.com/eNDO9/TGForge/blob/main/Guide%20-%20TGForge.pdf

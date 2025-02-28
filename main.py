@@ -36,7 +36,7 @@ if st.session_state.auth_step == 1:
 
     api_id = st.text_input("API ID", value=st.session_state.get("api_id", ""))
     api_hash = st.text_input("API Hash", value=st.session_state.get("api_hash", ""))
-    phone_number = st.text_input("Phone Number (e.g., +123456789)")
+    phone_number = st.text_input("Phone Number (e.g., +1 2224448888")
 
     col1, col2 = st.columns([2, 1])
 

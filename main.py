@@ -310,7 +310,7 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
         if "participants_group_counts" in st.session_state:
             st.write("#### Participant Count Comparison:")
             for group, counts in st.session_state.participants_group_counts.items():
-                st.write(f"{group}: {counts[0]} (reported by channel info) | {counts[1]} (collected via messages)")
+                st.write(f"{group}: {counts[0]} (reported by channel info) | {counts[1]} (collected)")
         # Optionally, write a summary below the tabs
         st.write("Total unique participants collected:", len(aggregated))
 

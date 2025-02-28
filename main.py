@@ -24,35 +24,6 @@ else:
 st.title("TGForge")
 st.logo("logo.png", size='large')  # Official app logo
 
-# Custom CSS for footer
-footer = """
-    <style>
-        .footer {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            background-color: #0E1117; /* Matches the dark mode */
-            color: white;
-            text-align: center;
-            padding: 10px 0;
-            font-size: 18px;
-        }
-        .footer a {
-            color: #0068B2; /* Matches your organization's color palette */
-            text-decoration: none;
-            font-weight: bold;
-        }
-        .footer a:hover {
-            text-decoration: underline;
-        }
-    </style>
-    <div class="footer">
-        Need help? <a href="https://github.com/eNDO9/Link/blob/main/Guide%20-%20Link.pdf" target="_blank">View the User Guide</a>
-    </div>
-"""
-st.markdown(footer, unsafe_allow_html=True)
-
 # Ensure session state variables are initialized
 if "auth_step" not in st.session_state:
     st.session_state.auth_step = 1
@@ -496,3 +467,11 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
             file_name="participants_analysis.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
+st.markdown(
+    """
+    <div style="text-align: center; margin-top: 50px;">
+        Need help? <a href="Guide%20-%20TGForge.pdf" target="_blank">View the User Guide</a>
+    </div>
+    """,
+    unsafe_allow_html=True,
+)

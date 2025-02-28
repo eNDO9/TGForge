@@ -470,7 +470,7 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
 st.markdown(
     """
     <div style="text-align: center; margin-top: 50px;">
-        Need help? <a href="Guide%20-%20TGForge.pdf" target="_blank">View the User Guide</a>
+        Need help? <a href="https://github.com/eNDO9/TGForge/blob/main/Guide%20-%20TGForge.pdf" target="_blank">View the User Guide</a>
     </div>
     """,
     unsafe_allow_html=True,

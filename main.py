@@ -72,7 +72,7 @@ if st.session_state.auth_step == 1:
 
 # --- Step 2: Enter Verification Code ---
 elif st.session_state.auth_step == 2:
-    st.subheader("Step 2: Enter Verification Code")
+    st.subheader("Enter Verification Code")
     verification_code = st.text_input("Enter the verification code")
 
     col1, col2 = st.columns([2, 1])

@@ -159,15 +159,10 @@ async def fetch_participants_via_messages(client, group_name, start_date=None, e
         return pd.DataFrame(), "Not Available", 0, {group_name: ("Not Available", 0)}
 
 async def fetch_participants(client, group_list, method="default", start_date=None, end_date=None):
-    """
-    Fetch participants for each group in group_list.
-    - method: "default" uses a direct API request, "messages" extracts from messages.
-    Returns a unified DataFrame, total reported count, total fetched count, and a dictionary mapping each group to (reported_count, fetched_count).
-    """
     all_dfs = []
     total_reported = 0
     total_fetched = 0
-    group_counts = {}  # {group_name: (reported_count, fetched_count)}
+    group_counts = {}
     for group in group_list:
         if method == "default":
             df, reported_count = await fetch_default_participants(client, group)
@@ -178,14 +173,14 @@ async def fetch_participants(client, group_list, method="default", start_date=No
             if not df.empty:
                 all_dfs.append(df)
         elif method == "messages":
-            df = await fetch_participants_via_messages(client, group, start_date, end_date)
-            fetched_count = len(df)
+            # Update to unpack the new tuple structure.
+            df, reported_count, fetched_count, counts = await fetch_participants_via_messages(client, group, start_date, end_date)
             total_fetched += fetched_count
-            group_counts[group] = ("Not Available", fetched_count)
+            group_counts[group] = (reported_count, fetched_count)
             if not df.empty:
-                df[group] = 1  # Mark membership
                 all_dfs.append(df)
-    if not all_dfs:
-        return pd.DataFrame(), total_reported, total_fetched, group_counts
-    unified_df = pd.concat(all_dfs, ignore_index=True)
+    if all_dfs:
+        unified_df = pd.concat(all_dfs, ignore_index=True)
+    else:
+        unified_df = pd.DataFrame()
     return unified_df, total_reported, total_fetched, group_counts

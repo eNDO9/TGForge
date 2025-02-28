@@ -12,14 +12,11 @@ This tool was created by and for the Institute for Strategic Dialogue.
 Special thanks to the Streamlit and Telethon for their support.
 
 # Guide
-### Overview
-TGForge is a Streamlit-based application that collects data from one or more public Telegram channels (or groups) using Telegram’s official API. With TGForge you can extract channel details, messages, forwards, and participant information for further analysis.
-- Tool here: https://isd-tgforge.streamlit.app/ 
 
 ### Prerequisites
 Telegram API Credentials: 
-- Obtain your API ID and API Hash from Telegram’s official page - https://core.telegram.org/api/obtaining_api_id
-- For guidance, watch this overview video in how to access your API ID and API hash - https://www.youtube.com/watch?v=tzYTLjdr7rI 
+- Obtain your API ID and API Hash from Telegram’s official [page](https://core.telegram.org/api/obtaining_api_id)
+- For guidance, watch this [overview video](https://www.youtube.com/watch?v=tzYTLjdr7rI) in how to access your API ID and API hash
 Account Considerations:
 - You may use a burner account; however, note that new accounts sometimes cannot obtain API credentials.
 

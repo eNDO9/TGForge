@@ -56,7 +56,7 @@ if st.session_state.auth_step == 1:
                         if not await st.session_state.client.is_user_authorized():
                             await st.session_state.client.send_code_request(phone_number)
 
-                    st.write("Connecting with Telegram's API..."
+                    st.write("Connecting with Telegram's API...")
                     st.session_state.event_loop.run_until_complete(connect_and_send_code())
                     st.session_state.auth_step = 2  
                     st.rerun()

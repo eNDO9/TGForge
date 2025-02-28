@@ -23,22 +23,24 @@ Telegram API Credentials:
 Account Considerations:
 - You may use a burner account; however, note that new accounts sometimes cannot obtain API credentials.
 
-Step 1: Enter Telegram API Credentials
-Input Credentials:
-•	Enter your API ID, API Hash, and phone number in the provided fields.
-•	Click the Next button.
+### Step 1: Enter Telegram API Credentials
+**Input Credentials:**
+- Enter your API ID, API Hash, and phone number in the provided fields.
+- Click the Next button.
 Issues:
-•	If you encounter errors (e.g., “database is locked”), click Refresh Session and try again. If issues persist, contact the DAU.
-•	Note: A successful submission will automatically move you to Step 2, after a few seconds.
+- If you encounter errors (e.g., “database is locked”), click Refresh Session and try again. If issues persist, contact the DAU.
+- Note: A successful submission will automatically move you to Step 2, after a few seconds.
 
-Step 2: Authentication
-Check Your Telegram App:
-•	Open Telegram on the account associated with your API credentials. You should receive a login code as if you were signing in on a new device.
-Enter the Code:
-•	Input the received verification code in the app.
-•	A notification may appear on your phone indicating an attempted login. Rest assured, this is only for authentication purposes and cannot be used to access your account.
-Authenticate
-•	Note: Once authenticated, the app will automatically advance to Step 3.
+### Step 2: Authentication
+**Check Your Telegram App:**
+- Open Telegram on the account associated with your API credentials. You should receive a login code as if you were signing in on a new device.
+
+**Enter the Code:**
+- Input the received verification code in the app.
+- A notification may appear on your phone indicating an attempted login. Rest assured, this is only for authentication purposes and cannot be used to access your account.
+
+****Authenticate****
+- **Note:** Once authenticated, the app will automatically advance to Step 3.
 
 Step 3: Using TGForge
 1)	Channel Info 

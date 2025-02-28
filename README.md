@@ -47,10 +47,8 @@ Issues:
 - **What It Does:** Collects all messages from the selected channel(s) or group(s). 
 - **How to Use:** Separate multiple channels with commas (e.g., durov, washingtonpost). By default, it collects all posts. You can optionally filter by a specific date range.
 - **Output:** Download options are available for both a CSV file (raw messages) and an Excel file (analytics).
-
 **Forwards**
 - **What It Does:** Similar to message collection but focuses on forwarded messages only.
-
 **Participants**
 - **What It Does:** Retrieves group/channel members, either directly via the API or by extracting senders from messages.
 - **Default:** Pulls participants directly from the API.

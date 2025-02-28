@@ -27,7 +27,7 @@ st.logo("logo.png", size='large')  # Official app logo
 # To display another logo, use st.image in a layout container:
 col1, col2 = st.columns(2)
 with col1:
-    st.image("logo2.png", caption="Secondary Logo", use_column_width=True)
+    st.image("icon2.png", caption="Secondary Logo", use_column_width=True)
 with col2:
     st.write("Additional content here")
 

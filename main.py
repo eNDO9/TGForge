@@ -22,7 +22,7 @@ else:
 
 # --- Streamlit UI ---
 st.title("TGForge")
-st.logo("logo.png", size='large')  # Official app logo
+st.logo("icon.png", size='large')  # Official app logo
 
 # Ensure session state variables are initialized
 if "auth_step" not in st.session_state:

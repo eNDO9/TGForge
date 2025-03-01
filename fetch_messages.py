@@ -126,16 +126,16 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None):
         # Convert the counter to a DataFrame, sort by count, and limit to top 50
         return pd.DataFrame(urls_counter.items(), columns=["URL", "Count"]).sort_values(by="Count", ascending=False).head(50)
     
-    # ✅ Process Forward Counts
+    # Process Forward Counts
     def process_forwards(df):
-        fwd_df = df[df["Is Forward"] == True]  # ✅ Filter forwarded messages
-        fwd_df = fwd_df[~fwd_df["Origin Username"].isin(["Unknown", "Not Available"])]  # ✅ Exclude unknown sources
+        fwd_df = df[df["Is Forward"] == True]  # Filter forwarded messages
+        fwd_df = fwd_df[~fwd_df["Origin Username"].isin(["Unknown", "Not Available"])]  # Exclude unknown sources
 
-        # ✅ Generate forward counts
+        # Generate forward counts
         fwd_counts_df = fwd_df.groupby(["Channel", "Origin Username"]).size().reset_index(name="Count")
         fwd_counts_df = fwd_counts_df.pivot(index="Origin Username", columns="Channel", values="Count").fillna(0)
 
-        # ✅ Add "Total Forwards" column & sort
+        # Add "Total Forwards" column & sort
         fwd_counts_df["Total Forwards"] = fwd_counts_df.sum(axis=1)
         fwd_counts_df = fwd_counts_df.sort_values(by="Total Forwards", ascending=False).reset_index()
 
@@ -239,7 +239,7 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None):
     top_hashtags_df = process_hashtags(df)
     top_urls_df = process_urls(df)
     
-    # ✅ Add Volume Analysis
+    # Add Volume Analysis
     daily_volume = generate_daily_volume(df, start_date, end_date)
     weekly_volume = generate_weekly_volume(df, start_date, end_date)
     monthly_volume = generate_monthly_volume(df, start_date, end_date)

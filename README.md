@@ -24,6 +24,7 @@ Account Considerations:
 **Input Credentials:**
 - Enter your API ID, API Hash, and phone number in the provided fields.
 - Click the Next button.
+
 Issues:
 - If you encounter errors (e.g., “database is locked”), click Refresh Session and try again. If issues persist, contact the DAU.
 - Note: A successful submission will automatically move you to Step 2, after a few seconds.

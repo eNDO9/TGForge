@@ -89,6 +89,8 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None):
                     "Views": message.views if message.views else None,
                     "Forwards": message.forwards if message.forwards else None,
                     "Replies": message.replies.replies if message.replies else "No Replies",
+                    "Reply To Message Snippet": None,
+                    "Reply To Message Sender": None,
                     "Grouped ID": str(message.grouped_id) if message.grouped_id else "Not Available"
                 }
                 
@@ -98,27 +100,29 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None):
                         replies = await client.get_messages(channel, reply_to=message.id, limit=100)
                         for reply in replies:
                             reply_datetime = reply.date.replace(tzinfo=None) if reply.date else "Not Available"
-                            reply_data = {
-                                "Channel": channel_name,
-                                "Message ID": reply.id,
-                                "Parent Message ID": message.id,  # Reference to original message
-                                "Sender User ID": reply.from_id.user_id if isinstance(reply.from_id, PeerUser) else channel_name,
-                                "Sender Username": reply.sender.username if reply.sender and hasattr(reply.sender, "username") else "Not Available",
-                                "Message DateTime (UTC)": reply_datetime,
-                                "Text": reply.text,
-                                "Message Type": type(reply.media).__name__ if reply.media else "Text",
-                                "Is Forward": bool(reply.forward),
-                                "Origin Username": original_username,
-                                "Geo-location": f"{reply.geo.lat}, {reply.geo.long}" if reply.geo else "None",
-                                "Hashtags": [tag for tag in reply.text.split() if tag.startswith("#")] if reply.text else [],
-                                "URLs Shared": re.findall(r"(https?://\S+)", reply.text) if reply.text else [],
-                                "Reactions": sum([reaction.count for reaction in reply.reactions.results]) if reply.reactions else 0,
-                                "Message URL": f"https://t.me/{channel.username}/{reply.id}" if hasattr(channel, "username") else "No URL available",
-                                "Views": reply.views if reply.views else None,
-                                "Forwards": reply.forwards if reply.forwards else None,
-                                "Replies": reply.replies.replies if reply.replies else "No Replies",
-                                "Grouped ID": str(reply.grouped_id) if reply.grouped_id else "Not Available"
-                            }
+                                reply_data = {
+                                    "Channel": channel_name,
+                                    "Message ID": reply.id,
+                                    "Parent Message ID": message.id,  # Reference to original message
+                                    "Sender User ID": reply.from_id.user_id if isinstance(reply.from_id, PeerUser) else channel_name,
+                                    "Sender Username": reply.sender.username if reply.sender and hasattr(reply.sender, "username") else "Not Available",
+                                    "Message DateTime (UTC)": reply_datetime,
+                                    "Text": reply.text,
+                                    "Message Type": type(reply.media).__name__ if reply.media else "Text",
+                                    "Is Forward": bool(reply.forward),
+                                    "Origin Username": original_username,
+                                    "Geo-location": f"{reply.geo.lat}, {reply.geo.long}" if reply.geo else "None",
+                                    "Hashtags": [tag for tag in reply.text.split() if tag.startswith("#")] if reply.text else [],
+                                    "URLs Shared": re.findall(r"(https?://\S+)", reply.text) if reply.text else [],
+                                    "Reactions": sum([reaction.count for reaction in reply.reactions.results]) if reply.reactions else 0,
+                                    "Message URL": f"https://t.me/{channel.username}/{reply.id}" if hasattr(channel, "username") else "No URL available",
+                                    "Views": reply.views if reply.views else None,
+                                    "Forwards": reply.forwards if reply.forwards else None,
+                                    "Replies": reply.replies.replies if reply.replies else "No Replies",
+                                    "Reply To Message Snippet": message.text[:100] + "..." if message.text else "No Text",
+                                    "Reply To Message Sender": message.sender.username if message.sender and hasattr(message.sender, "username") else "Not Available",
+                                    "Grouped ID": str(reply.grouped_id) if reply.grouped_id else "Not Available"
+                                }
                             messages_data.append(reply_data)
                     except Exception as e:
                         print(f"Error fetching replies for message {message.id} in {channel_name}: {e}")

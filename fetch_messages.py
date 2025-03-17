@@ -60,6 +60,17 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None):
                 reactions = sum([reaction.count for reaction in message.reactions.results]) if message.reactions else 0
                 geo_location = f"{message.geo.lat}, {message.geo.long}" if message.geo else "None"
 
+                if isinstance(message.from_id, PeerUser):
+                        sender_user_id = message.from_id.user_id
+                    else:
+                        sender_user_id = channel_name  # If it's from a channel, use the channel name
+    
+                    sender_username = (
+                        message.sender.username
+                        if message.sender and hasattr(message.sender, "username")
+                        else (channel.username if hasattr(channel, "username") else "Not Available")
+                    )
+                
                 original_username = "Not Available"
                 if is_forward:
                     try:
@@ -74,8 +85,8 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None):
                     "Channel": channel_name,
                     "Message ID": message.id,
                     "Parent Message ID": None,  # This is for main messages; replies will have an actual Parent Message ID
-                    "Sender User ID": message.from_id.user_id if isinstance(message.from_id, PeerUser) else channel_name,
-                    "Sender Username": message.sender.username if message.sender and hasattr(message.sender, "username") else "Not Available",
+                    "Sender User ID": sender_user_id,
+                    "Sender Username": sender_username,                 
                     "Message DateTime (UTC)": message_datetime,
                     "Text": message.text,
                     "Message Type": message_type,
@@ -100,12 +111,24 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None):
                         replies = await client.get_messages(channel, reply_to=message.id, limit=100)
                         for reply in replies:
                             reply_datetime = reply.date.replace(tzinfo=None) if reply.date else "Not Available"
+
+                            if isinstance(reply.from_id, PeerUser):
+                                reply_user_id = reply.from_id.user_id
+                            else:
+                                reply_user_id = channel_name  # If it's from a channel, use the channel name
+            
+                            reply_username = (
+                                reply.sender.username
+                                if reply.sender and hasattr(reply.sender, "username")
+                                else (channel.username if hasattr(channel, "username") else "Not Available")
+                            )
+                            
                             reply_data = {
                                 "Channel": channel_name,
                                 "Message ID": reply.id,
                                 "Parent Message ID": message.id,  # Reference to original message
-                                "Sender User ID": reply.from_id.user_id if isinstance(reply.from_id, PeerUser) else channel_name,
-                                "Sender Username": reply.sender.username if reply.sender and hasattr(reply.sender, "username") else "Not Available",
+                                "Sender User ID": reply_user_id,
+                                "Sender Username": reply_username,
                                 "Message DateTime (UTC)": reply_datetime,
                                 "Text": reply.text,
                                 "Message Type": type(reply.media).__name__ if reply.media else "Text",

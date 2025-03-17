@@ -11,14 +11,13 @@ from telethon.errors import PhoneNumberInvalidError, PhoneCodeInvalidError, Sess
 
 # --- Ensure an Event Loop Exists ---
 import sys
-
 if "event_loop" not in st.session_state:
     if sys.platform == "win32":
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())  # Windows fix
     st.session_state.event_loop = asyncio.new_event_loop()
     asyncio.set_event_loop(st.session_state.event_loop)
 else:
-    asyncio.set_event_loop(st.session_state.event_loop)  # ✅ Keep the same event loop
+    asyncio.set_event_loop(st.session_state.event_loop)  # Keep the same event loop
 
 # --- Streamlit UI ---
 st.title("TGForge")

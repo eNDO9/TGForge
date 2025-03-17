@@ -61,15 +61,15 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None):
                 geo_location = f"{message.geo.lat}, {message.geo.long}" if message.geo else "None"
 
                 if isinstance(message.from_id, PeerUser):
-                        sender_user_id = message.from_id.user_id
-                    else:
-                        sender_user_id = channel_name  # If it's from a channel, use the channel name
+                    sender_user_id = message.from_id.user_id
+                else:
+                    sender_user_id = channel_name  # If it's from a channel, use the channel name
     
-                    sender_username = (
-                        message.sender.username
-                        if message.sender and hasattr(message.sender, "username")
-                        else (channel.username if hasattr(channel, "username") else "Not Available")
-                    )
+                sender_username = (
+                    message.sender.username
+                    if message.sender and hasattr(message.sender, "username")
+                    else (channel.username if hasattr(channel, "username") else "Not Available")
+                )
                 
                 original_username = "Not Available"
                 if is_forward:

@@ -8,6 +8,7 @@ from telethon.errors import FloodWaitError, RpcCallFailError
 from telethon.tl.types import PeerUser
 import streamlit as st
 
+
 async def fetch_messages(client, channel_list, start_date=None, end_date=None):
     all_messages_data = []
     limit = 1000  
@@ -58,31 +59,17 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None):
                 hashtags = [tag for tag in message.text.split() if tag.startswith("#")] if message.text else []
                 reactions = sum([reaction.count for reaction in message.reactions.results]) if message.reactions else 0
                 geo_location = f"{message.geo.lat}, {message.geo.long}" if message.geo else "None"
-                # Prepare sender information with additional troubleshooting fields
-                sender_info = {}
-                # If message.sender is available, use its properties.
-                if message.sender:
-                    sender_info["Sender User ID"] = getattr(message.sender, "id", "Not Available")
-                    sender_info["Sender Username"] = getattr(message.sender, "username", "Not Available")
-                    sender_info["Sender First Name"] = getattr(message.sender, "first_name", "Not Available")
-                    sender_info["Sender Last Name"] = getattr(message.sender, "last_name", "Not Available")
+
+                if isinstance(message.from_id, PeerUser):
+                    sender_user_id = message.from_id.user_id
                 else:
-                    # Fallback: check message.from_id
-                    if isinstance(message.from_id, PeerUser):
-                        sender_info["Sender User ID"] = message.from_id.user_id
-                        sender_info["Sender Username"] = "Not Available"
-                        sender_info["Sender First Name"] = "Not Available"
-                        sender_info["Sender Last Name"] = "Not Available"
-                    else:
-                        # For channel posts where sender info might not be available,
-                        # fall back to channel details.
-                        sender_info["Sender User ID"] = "Not Available"
-                        sender_info["Sender Username"] = getattr(channel, "username", "Not Available")
-                        sender_info["Sender First Name"] = "Not Available"
-                        sender_info["Sender Last Name"] = "Not Available"
-            
-                # (Optional) Store the raw sender data for troubleshooting.
-                raw_sender = str(message.from_id)
+                    sender_user_id = channel_name  # If it's from a channel, use the channel name
+    
+                sender_username = (
+                    message.sender.username
+                    if message.sender and hasattr(message.sender, "username")
+                    else (channel.username if hasattr(channel, "username") else "Not Available")
+                )
                 
                 original_username = "Not Available"
                 if is_forward:
@@ -115,7 +102,8 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None):
                     "Replies": message.replies.replies if message.replies else "No Replies",
                     "Reply To Message Snippet": None,
                     "Reply To Message Sender": None,
-                    "Grouped ID": str(message.grouped_id) if message.grouped_id else "Not Available"
+                    "Grouped ID": str(message.grouped_id) if message.grouped_id else "Not Available",
+                    "Raw Sender": message.from_id
                 }
                 
                 # Fetch Replies (Nested Comments)
@@ -158,7 +146,7 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None):
                                 "Reply To Message Snippet": message.text[:100] + "..." if message.text else "No Text",
                                 "Reply To Message Sender": message.sender.username if message.sender and hasattr(message.sender, "username") else "Not Available",
                                 "Grouped ID": str(reply.grouped_id) if reply.grouped_id else "Not Available",
-                                "Raw Sender": None
+                                "Raw Sender": reply.from_id
                             }
                             messages_data.append(reply_data)
                     except Exception as e:

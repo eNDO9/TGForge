@@ -63,7 +63,7 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None):
                 if isinstance(message.from_id, PeerUser):
                     sender_user_id = message.from_id.user_id
                 else:
-                    sender_user_id = channel_name  # If it's from a channel, use the channel name
+                    sender_user_id = message.id
     
                 sender_username = (
                     message.sender.username
@@ -103,7 +103,6 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None):
                     "Reply To Message Snippet": None,
                     "Reply To Message Sender": None,
                     "Grouped ID": str(message.grouped_id) if message.grouped_id else "Not Available",
-                    "Raw Sender": message.sender
                 }
                 
                 # Fetch Replies (Nested Comments)

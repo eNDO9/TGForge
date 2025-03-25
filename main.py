@@ -8,6 +8,9 @@ from fetch_forwards import fetch_forwards
 from fetch_messages import fetch_messages
 from fetch_participants import fetch_participants
 from telethon.errors import PhoneNumberInvalidError, PhoneCodeInvalidError, SessionPasswordNeededError
+import nest_asyncio
+
+nest_asyncio.apply()
 
 # --- Ensure an Event Loop Exists ---
 import sys

@@ -110,17 +110,14 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None):
                         for reply in replies:
                             reply_datetime = reply.date.replace(tzinfo=None) if reply.date else "Not Available"
 
-                            if isinstance(reply.from_id, PeerUser):
-                                reply_user_id = reply.from_id.user_id
+                            if reply.sender:
+                                reply_user_id = getattr(reply.sender, "id", "Not Available")
+                                reply_username = getattr(reply.sender, "username", "Not Available")
                             else:
-                                reply_user_id = channel_name  # If it's from a channel, use the channel name
-            
-                            reply_username = (
-                                reply.sender.username
-                                if reply.sender and hasattr(reply.sender, "username")
-                                else (channel.username if hasattr(channel, "username") else "Not Available")
-                            )
-                            
+                                # For a reply from a channel, use the channel's details
+                                reply_user_id = getattr(channel, "id", "Not Available")
+                                reply_username = getattr(channel, "username", "Not Available")
+
                             reply_data = {
                                 "Channel": channel_name,
                                 "Message ID": reply.id,

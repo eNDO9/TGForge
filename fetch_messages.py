@@ -59,17 +59,31 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None):
                 hashtags = [tag for tag in message.text.split() if tag.startswith("#")] if message.text else []
                 reactions = sum([reaction.count for reaction in message.reactions.results]) if message.reactions else 0
                 geo_location = f"{message.geo.lat}, {message.geo.long}" if message.geo else "None"
-
-                if isinstance(message.from_id, PeerUser):
-                    sender_user_id = message.from_id.user_id
+                # Prepare sender information with additional troubleshooting fields
+                sender_info = {}
+                # If message.sender is available, use its properties.
+                if message.sender:
+                    sender_info["Sender User ID"] = getattr(message.sender, "id", "Not Available")
+                    sender_info["Sender Username"] = getattr(message.sender, "username", "Not Available")
+                    sender_info["Sender First Name"] = getattr(message.sender, "first_name", "Not Available")
+                    sender_info["Sender Last Name"] = getattr(message.sender, "last_name", "Not Available")
                 else:
-                    sender_user_id = channel_name  # If it's from a channel, use the channel name
-    
-                sender_username = (
-                    message.sender.username
-                    if message.sender and hasattr(message.sender, "username")
-                    else (channel.username if hasattr(channel, "username") else "Not Available")
-                )
+                    # Fallback: check message.from_id
+                    if isinstance(message.from_id, PeerUser):
+                        sender_info["Sender User ID"] = message.from_id.user_id
+                        sender_info["Sender Username"] = "Not Available"
+                        sender_info["Sender First Name"] = "Not Available"
+                        sender_info["Sender Last Name"] = "Not Available"
+                    else:
+                        # For channel posts where sender info might not be available,
+                        # fall back to channel details.
+                        sender_info["Sender User ID"] = "Not Available"
+                        sender_info["Sender Username"] = getattr(channel, "username", "Not Available")
+                        sender_info["Sender First Name"] = "Not Available"
+                        sender_info["Sender Last Name"] = "Not Available"
+            
+                # (Optional) Store the raw sender data for troubleshooting.
+                raw_sender = str(message.from_id)
                 
                 original_username = "Not Available"
                 if is_forward:
@@ -103,6 +117,7 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None):
                     "Reply To Message Snippet": None,
                     "Reply To Message Sender": None,
                     "Grouped ID": str(message.grouped_id) if message.grouped_id else "Not Available"
+                    "Raw Sender": raw_sender  # For troubleshooting
                 }
                 
                 # Fetch Replies (Nested Comments)

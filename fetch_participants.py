@@ -64,10 +64,8 @@ async def fetch_participants_via_messages(client, group_name, start_date=None, e
     """
     try:
         # First, call the API-based method to get reported participants count.
-        # (Make sure fetch_default_participants is imported from its module.)
         from fetch_participants import fetch_default_participants
         api_df, api_reported_count = await fetch_default_participants(client, group_name)
-        # Use the API's reported count if available; otherwise, default to "Not Available"
         reported_count = api_reported_count if api_reported_count not in [None, 0] else "Not Available"
 
         st.write(f"Fetching messages for group '{group_name}' for participant extraction...")
@@ -88,14 +86,11 @@ async def fetch_participants_via_messages(client, group_name, start_date=None, e
                 if not message.date:
                     continue
 
-                # Remove timezone info for comparison.
                 msg_date = message.date.replace(tzinfo=None).date()
 
-                # Skip messages that are after the end_date.
                 if end_date and msg_date > end_date:
                     continue
 
-                # If the message is older than the start_date, stop further processing.
                 if start_date and msg_date < start_date:
                     stop_fetching = True
                     break
@@ -115,43 +110,44 @@ async def fetch_participants_via_messages(client, group_name, start_date=None, e
 
         st.write(f"Total messages collected for group '{group_name}': {len(all_messages)}")
 
-        # Extract unique participants from the collected messages.
+        # Extract unique participants from messages.
         from telethon.tl.types import User
         participants = {}
         for message in all_messages:
+            # If message.sender exists and is a User, use it; otherwise, fall back to the channel.
             if message.sender and isinstance(message.sender, User):
                 user = message.sender
-                if user.id not in participants:
-                    participants[user.id] = {
-                        "User ID": user.id,
-                        "Deleted": getattr(user, "deleted", False),
-                        "Is Bot": getattr(user, "bot", False),
-                        "Verified": getattr(user, "verified", False),
-                        "Restricted": getattr(user, "restricted", False),
-                        "Scam": getattr(user, "scam", False),
-                        "Fake": getattr(user, "fake", False),
-                        "Premium": getattr(user, "premium", False),
-                        "Access Hash": user.access_hash,
-                        "First Name": user.first_name or "No First Name",
-                        "Last Name": user.last_name or "No Last Name",
-                        "Username": user.username or "No Username",
-                        "Phone": user.phone or "No Phone",
-                        "Status": str(user.status) if user.status else "Not Available",
-                    }
+            else:
+                user = channel  = await client.get_entity(group_name)  # fallback: use group/channel entity
+
+            if user.id not in participants:
+                participants[user.id] = {
+                    "User ID": user.id,
+                    "Deleted": getattr(user, "deleted", False),
+                    "Is Bot": getattr(user, "bot", False),
+                    "Verified": getattr(user, "verified", False),
+                    "Restricted": getattr(user, "restricted", False),
+                    "Scam": getattr(user, "scam", False),
+                    "Fake": getattr(user, "fake", False),
+                    "Premium": getattr(user, "premium", False),
+                    "Access Hash": user.access_hash if hasattr(user, "access_hash") else "Not Available",
+                    "First Name": user.first_name if hasattr(user, "first_name") and user.first_name else "No First Name",
+                    "Last Name": user.last_name if hasattr(user, "last_name") and user.last_name else "No Last Name",
+                    "Username": user.username if hasattr(user, "username") and user.username else "Not Available",
+                    "Phone": user.phone if hasattr(user, "phone") and user.phone else "Not Available",
+                    "Status": str(user.status) if hasattr(user, "status") and user.status else "Not Available",
+                }
 
         st.write(f"Extracted {len(participants)} unique participants from messages for group '{group_name}'")
-
-        # Merge with participants retrieved via API, without overwriting existing entries.
+        # Merge with participants retrieved via API without overwriting existing entries.
         if not api_df.empty:
             for _, row in api_df.iterrows():
                 user_id = row.get("User ID")
                 if user_id not in participants:
                     participants[user_id] = row.to_dict()
-
         fetched_count = len(participants)
         group_counts = {group_name: (reported_count, fetched_count)}
         st.write(f"Total unique participants after merging: {fetched_count}")
-
         return pd.DataFrame(list(participants.values())), reported_count, fetched_count, group_counts
 
     except Exception as e:
@@ -173,7 +169,6 @@ async def fetch_participants(client, group_list, method="default", start_date=No
             if not df.empty:
                 all_dfs.append(df)
         elif method == "messages":
-            # Update to unpack the new tuple structure.
             df, reported_count, fetched_count, counts = await fetch_participants_via_messages(client, group, start_date, end_date)
             total_fetched += fetched_count
             group_counts[group] = (reported_count, fetched_count)

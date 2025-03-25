@@ -103,7 +103,7 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None):
                     "Reply To Message Snippet": None,
                     "Reply To Message Sender": None,
                     "Grouped ID": str(message.grouped_id) if message.grouped_id else "Not Available",
-                    "Raw Sender": message.from_id
+                    "Raw Sender": message.sender
                 }
                 
                 # Fetch Replies (Nested Comments)
@@ -146,7 +146,7 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None):
                                 "Reply To Message Snippet": message.text[:100] + "..." if message.text else "No Text",
                                 "Reply To Message Sender": message.sender.username if message.sender and hasattr(message.sender, "username") else "Not Available",
                                 "Grouped ID": str(reply.grouped_id) if reply.grouped_id else "Not Available",
-                                "Raw Sender": reply.from_id
+                                "Raw Sender": message.sender
                             }
                             messages_data.append(reply_data)
                     except Exception as e:

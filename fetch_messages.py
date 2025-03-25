@@ -117,7 +117,6 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None):
                     "Reply To Message Snippet": None,
                     "Reply To Message Sender": None,
                     "Grouped ID": str(message.grouped_id) if message.grouped_id else "Not Available"
-                    "Raw Sender": raw_sender  # For troubleshooting
                 }
                 
                 # Fetch Replies (Nested Comments)

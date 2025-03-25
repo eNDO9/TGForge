@@ -56,6 +56,10 @@ async def fetch_participants_via_messages(client, group_name, start_date=None, e
     Fetch participants from a group by collecting messages (filtered by date)
     and extracting unique senders, then supplement with API-retrieved members.
     
+    Additionally, for each message that has replies, fetch those replies
+    and extract the senders (i.e. commenters). This helps capture users who
+    reply to channel posts.
+    
     Returns a tuple of:
       - DataFrame with detailed participant information
       - Reported participant count (from channel info via API)
@@ -63,7 +67,7 @@ async def fetch_participants_via_messages(client, group_name, start_date=None, e
       - A dictionary mapping the group to (reported_count, fetched_count)
     """
     try:
-        # First, call the API-based method to get reported participants count.
+        # First, get reported count via the API method.
         from fetch_participants import fetch_default_participants
         api_df, api_reported_count = await fetch_default_participants(client, group_name)
         reported_count = api_reported_count if api_reported_count not in [None, 0] else "Not Available"
@@ -81,45 +85,36 @@ async def fetch_participants_via_messages(client, group_name, start_date=None, e
                 break
 
             st.write(f"Fetched {len(messages)} messages in current batch.")
-
             for message in messages:
                 if not message.date:
                     continue
-
                 msg_date = message.date.replace(tzinfo=None).date()
-
                 if end_date and msg_date > end_date:
                     continue
-
                 if start_date and msg_date < start_date:
                     stop_fetching = True
                     break
-
                 all_messages.append(message)
-
             if stop_fetching:
                 st.write("Reached messages older than start_date. Stopping further fetch.")
                 break
-
             offset_id = messages[-1].id
             time.sleep(1)
-
             if st.session_state.get("cancel_fetch", False):
                 st.write("Fetch participants via messages cancelled by user.")
                 break
 
         st.write(f"Total messages collected for group '{group_name}': {len(all_messages)}")
 
-        # Extract unique participants from messages.
         from telethon.tl.types import User
         participants = {}
+        # Process main messages
         for message in all_messages:
-            # If message.sender exists and is a User, use it; otherwise, fall back to the channel.
             if message.sender and isinstance(message.sender, User):
                 user = message.sender
             else:
-                user = channel  = await client.get_entity(group_name)  # fallback: use group/channel entity
-
+                # For channel posts without a sender, use the group/channel entity.
+                user = await client.get_entity(group_name)
             if user.id not in participants:
                 participants[user.id] = {
                     "User ID": user.id,
@@ -137,17 +132,49 @@ async def fetch_participants_via_messages(client, group_name, start_date=None, e
                     "Phone": user.phone if hasattr(user, "phone") and user.phone else "Not Available",
                     "Status": str(user.status) if hasattr(user, "status") and user.status else "Not Available",
                 }
+        # Process replies (comments)
+        for message in all_messages:
+            if message.replies and message.replies.replies > 0:
+                try:
+                    replies = await client.get_messages(group_name, reply_to=message.id, limit=100)
+                    for reply in replies:
+                        if reply.sender and isinstance(reply.sender, User):
+                            r_user = reply.sender
+                        else:
+                            r_user = await client.get_entity(group_name)
+                        if r_user.id not in participants:
+                            participants[r_user.id] = {
+                                "User ID": r_user.id,
+                                "Deleted": getattr(r_user, "deleted", False),
+                                "Is Bot": getattr(r_user, "bot", False),
+                                "Verified": getattr(r_user, "verified", False),
+                                "Restricted": getattr(r_user, "restricted", False),
+                                "Scam": getattr(r_user, "scam", False),
+                                "Fake": getattr(r_user, "fake", False),
+                                "Premium": getattr(r_user, "premium", False),
+                                "Access Hash": r_user.access_hash if hasattr(r_user, "access_hash") else "Not Available",
+                                "First Name": r_user.first_name if hasattr(r_user, "first_name") and r_user.first_name else "No First Name",
+                                "Last Name": r_user.last_name if hasattr(r_user, "last_name") and r_user.last_name else "No Last Name",
+                                "Username": r_user.username if hasattr(r_user, "username") and r_user.username else "Not Available",
+                                "Phone": r_user.phone if hasattr(r_user, "phone") and r_user.phone else "Not Available",
+                                "Status": str(r_user.status) if hasattr(r_user, "status") and r_user.status else "Not Available",
+                            }
+                except Exception as e:
+                    st.write(f"Error fetching replies for message {message.id} in {group_name}: {e}")
 
         st.write(f"Extracted {len(participants)} unique participants from messages for group '{group_name}'")
-        # Merge with participants retrieved via API without overwriting existing entries.
+
+        # Merge with API-based participants without overwriting existing entries.
         if not api_df.empty:
             for _, row in api_df.iterrows():
                 user_id = row.get("User ID")
                 if user_id not in participants:
                     participants[user_id] = row.to_dict()
+
         fetched_count = len(participants)
         group_counts = {group_name: (reported_count, fetched_count)}
         st.write(f"Total unique participants after merging: {fetched_count}")
+
         return pd.DataFrame(list(participants.values())), reported_count, fetched_count, group_counts
 
     except Exception as e:

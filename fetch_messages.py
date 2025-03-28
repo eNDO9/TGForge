@@ -8,36 +8,30 @@ from telethon.errors import FloodWaitError, RpcCallFailError
 from telethon.tl.types import PeerUser
 import streamlit as st
 
-
 async def fetch_messages(client, channel_list, start_date=None, end_date=None, include_comments=True):
     all_messages_data = []
     limit = 1000  
-
+    
     for channel_name in channel_list:
         channel = await client.get_entity(channel_name)
         offset_id = 0
         total_messages = []
-
         try:
             while True:
                 messages = await client.get_messages(channel, limit=limit, offset_id=offset_id)
                 if not messages:
                     break
-
                 stop_fetching = False  # Flag to stop if we go before the start_date
                 for message in messages:
                     message_datetime = message.date.replace(tzinfo=None) if message.date else None
-                    
                     # If we've reached messages older than our start_date, break out of the loop.
                     if start_date and message_datetime and message_datetime.date() < start_date:
                         stop_fetching = True
                         break
-
                     # Only add messages within the specified range
                     if ((not start_date or (message_datetime and message_datetime.date() >= start_date)) and 
                         (not end_date or (message_datetime and message_datetime.date() <= end_date))):
                         total_messages.append(message)
-
                 if stop_fetching:
                     break
 

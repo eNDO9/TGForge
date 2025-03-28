@@ -103,7 +103,7 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None, i
                         replies = await client.get_messages(channel, reply_to=message.id, limit=100)
                         for reply in replies:
                             reply_datetime = reply.date.replace(tzinfo=None) if reply.date else "Not Available"
-
+                
                             if reply.sender:
                                 reply_user_id = getattr(reply.sender, "id", "Not Available")
                                 reply_username = getattr(reply.sender, "username", "Not Available")

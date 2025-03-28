@@ -154,7 +154,9 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None, i
                     
         # Add the channel's messages (original posts and replies) to the global collection.
         all_messages_data.extend(channel_messages_data)
-
+        except Exception as e:
+            print(f"Error fetching messages for {channel_name}: {e}")
+        
     # Convert to DataFrame
     df = pd.DataFrame(all_messages_data)
     

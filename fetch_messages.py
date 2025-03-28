@@ -16,146 +16,142 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None, i
         channel = await client.get_entity(channel_name)
         offset_id = 0
         total_messages = []
-        try:
-            while True:
-                messages = await client.get_messages(channel, limit=limit, offset_id=offset_id)
-                if not messages:
+        while True:
+            messages = await client.get_messages(channel, limit=limit, offset_id=offset_id)
+            if not messages:
+                break
+            stop_fetching = False  # Flag to stop if we go before the start_date
+            for message in messages:
+                message_datetime = message.date.replace(tzinfo=None) if message.date else None
+                # If we've reached messages older than our start_date, break out of the loop.
+                if start_date and message_datetime and message_datetime.date() < start_date:
+                    stop_fetching = True
                     break
-                stop_fetching = False  # Flag to stop if we go before the start_date
-                for message in messages:
-                    message_datetime = message.date.replace(tzinfo=None) if message.date else None
-                    # If we've reached messages older than our start_date, break out of the loop.
-                    if start_date and message_datetime and message_datetime.date() < start_date:
-                        stop_fetching = True
-                        break
-                    # Only add messages within the specified range
-                    if ((not start_date or (message_datetime and message_datetime.date() >= start_date)) and 
-                        (not end_date or (message_datetime and message_datetime.date() <= end_date))):
-                        total_messages.append(message)
-                if stop_fetching:
-                    break
+                # Only add messages within the specified range
+                if ((not start_date or (message_datetime and message_datetime.date() >= start_date)) and 
+                    (not end_date or (message_datetime and message_datetime.date() <= end_date))):
+                    total_messages.append(message)
+            if stop_fetching:
+                break
 
-                # Inside your while loop in fetch_messages.py:
-                offset_id = messages[-1].id if messages else offset_id
-                time.sleep(1)
+            # Inside your while loop in fetch_messages.py:
+            offset_id = messages[-1].id if messages else offset_id
+            time.sleep(1)
 
-                # Check if a cancel flag was set:
-                if st.session_state.get("cancel_fetch", False):
-                    break
+            # Check if a cancel flag was set:
+            if st.session_state.get("cancel_fetch", False):
+                break
 
-            # Process messages
-            channel_messages_data = []
-            for message in total_messages:
-                message_datetime = message.date.replace(tzinfo=None) if message.date else "Not Available"
-                message_type = type(message.media).__name__ if message.media else "Text"
-                is_forward = bool(message.forward)
-                urls_shared = re.findall(r"(https?://\S+)", message.text) if message.text else []
-                hashtags = [tag for tag in message.text.split() if tag.startswith("#")] if message.text else []
-                reactions = sum([reaction.count for reaction in message.reactions.results]) if message.reactions else 0
-                geo_location = f"{message.geo.lat}, {message.geo.long}" if message.geo else "None"
-                
-                # Determine sender info
-                if message.sender:
-                    sender_user_id = getattr(message.sender, "id", "Not Available")
-                    sender_username = getattr(message.sender, "username", "Not Available")
-                else:
-                    # If there's no sender, assume this is a channel post.
-                    sender_user_id = getattr(channel, "id", "Not Available")
-                    sender_username = getattr(channel, "username", "Not Available")
-                    
-                original_username = "Not Available"
-                if is_forward:
-                    try:
-                        if message.forward.chat and hasattr(message.forward.chat, "username"):
-                            original_username = message.forward.chat.username
-                    except AttributeError:
-                        original_username = "Unknown"
-
-                message_url = f"https://t.me/{channel.username}/{message.id}" if hasattr(channel, "username") else "No URL available"
-
-                message_data = {
-                    "Channel": channel_name,
-                    "Message ID": message.id,
-                    "Parent Message ID": None,  # This is for main messages; replies will have an actual Parent Message ID
-                    "Sender User ID": sender_user_id,
-                    "Sender Username": sender_username,                 
-                    "Message DateTime (UTC)": message_datetime,
-                    "Text": message.text,
-                    "Message Type": message_type,
-                    "Is Forward": is_forward,
-                    "Origin Username": original_username,
-                    "Geo-location": geo_location,
-                    "Hashtags": hashtags,
-                    "URLs Shared": urls_shared,
-                    "Reactions": reactions,
-                    "Message URL": message_url,
-                    "Views": message.views if message.views else None,
-                    "Forwards": message.forwards if message.forwards else None,
-                    "Replies": message.replies.replies if message.replies else "No Replies",
-                    "Reply To Message Snippet": None,
-                    "Reply To Message Sender": None,
-                    "Grouped ID": str(message.grouped_id) if message.grouped_id else "Not Available",
-                }
-                channel_messages_data.append(message_data)
-            st.write(f"[DEBUG] Collected {len(channel_messages_data)} original messages for channel {channel_name}.")
-
-            # Fetch Replies (Nested Comments)
-            # Collect reply-fetching tasks for messages that have replies.
-            if include_comments:
-                reply_tasks = [
-                    (message, client.get_messages(channel, reply_to=message.id, limit=100))
-                    for message in total_messages if message.replies and message.replies.replies > 0
-                ]
-                st.write(f"[DEBUG] Found {len(reply_tasks)} messages with replies for channel {channel_name}.")
-                if reply_tasks:
-                    # Unzip into two lists: original messages and their corresponding tasks.
-                    msgs, tasks = zip(*reply_tasks)
-                    # Run all reply-fetching tasks concurrently.
-                    replies_results = await asyncio.gather(*tasks, return_exceptions=True)
-                    # Process each set of replies.
-                    for orig_message, replies in zip(msgs, replies_results):
-                        if isinstance(replies, Exception):
-                            print(f"Error fetching replies for message {orig_message.id}: {replies}")
-                        else:
-                            for reply in replies:
-                                reply_datetime = reply.date.replace(tzinfo=None) if reply.date else "Not Available"
-                                if reply.sender:
-                                    reply_user_id = getattr(reply.sender, "id", "Not Available")
-                                    reply_username = getattr(reply.sender, "username", "Not Available")
-                                else:
-                                    reply_user_id = getattr(channel, "id", "Not Available")
-                                    reply_username = getattr(channel, "username", "Not Available")
-                                reply_data = {
-                                    "Channel": channel_name,
-                                    "Message ID": reply.id,
-                                    "Parent Message ID": orig_message.id,  # Reference to original message
-                                    "Sender User ID": reply_user_id,
-                                    "Sender Username": reply_username,
-                                    "Message DateTime (UTC)": reply_datetime,
-                                    "Text": reply.text,
-                                    "Message Type": type(reply.media).__name__ if reply.media else "Text",
-                                    "Is Forward": bool(reply.forward),
-                                    "Origin Username": original_username,
-                                    "Geo-location": f"{reply.geo.lat}, {reply.geo.long}" if reply.geo else "None",
-                                    "Hashtags": [tag for tag in reply.text.split() if tag.startswith("#")] if reply.text else [],
-                                    "URLs Shared": re.findall(r"(https?://\S+)", reply.text) if reply.text else [],
-                                    "Reactions": sum([reaction.count for reaction in reply.reactions.results]) if reply.reactions else 0,
-                                    "Message URL": f"https://t.me/{channel.username}/{reply.id}" if hasattr(channel, "username") else "No URL available",
-                                    "Views": reply.views if reply.views else None,
-                                    "Forwards": reply.forwards if reply.forwards else None,
-                                    "Replies": reply.replies.replies if reply.replies else "No Replies",
-                                    "Reply To Message Snippet": orig_message.text[:100] + "..." if orig_message.text else "No Text",
-                                    "Reply To Message Sender": orig_message.sender.username if orig_message.sender and hasattr(orig_message.sender, "username") else "Not Available",
-                                    "Grouped ID": str(reply.grouped_id) if reply.grouped_id else "Not Available",
-                                }
-                                channel_messages_data.append(reply_data)
-                else:
-                    st.write("[DEBUG] No reply tasks to run for this channel.")
-        except Exception as e:
-            print(f"Error fetching messages for {channel_name}: {e}")
+        # Process messages
+        channel_messages_data = []
+        for message in total_messages:
+            message_datetime = message.date.replace(tzinfo=None) if message.date else "Not Available"
+            message_type = type(message.media).__name__ if message.media else "Text"
+            is_forward = bool(message.forward)
+            urls_shared = re.findall(r"(https?://\S+)", message.text) if message.text else []
+            hashtags = [tag for tag in message.text.split() if tag.startswith("#")] if message.text else []
+            reactions = sum([reaction.count for reaction in message.reactions.results]) if message.reactions else 0
+            geo_location = f"{message.geo.lat}, {message.geo.long}" if message.geo else "None"
             
-        # Add the channel's messages (original posts and replies) to the global collection.
-        all_messages_data.extend(channel_messages_data)
+            # Determine sender info
+            if message.sender:
+                sender_user_id = getattr(message.sender, "id", "Not Available")
+                sender_username = getattr(message.sender, "username", "Not Available")
+            else:
+                # If there's no sender, assume this is a channel post.
+                sender_user_id = getattr(channel, "id", "Not Available")
+                sender_username = getattr(channel, "username", "Not Available")
+                
+            original_username = "Not Available"
+            if is_forward:
+                try:
+                    if message.forward.chat and hasattr(message.forward.chat, "username"):
+                        original_username = message.forward.chat.username
+                except AttributeError:
+                    original_username = "Unknown"
+
+            message_url = f"https://t.me/{channel.username}/{message.id}" if hasattr(channel, "username") else "No URL available"
+
+            message_data = {
+                "Channel": channel_name,
+                "Message ID": message.id,
+                "Parent Message ID": None,  # This is for main messages; replies will have an actual Parent Message ID
+                "Sender User ID": sender_user_id,
+                "Sender Username": sender_username,                 
+                "Message DateTime (UTC)": message_datetime,
+                "Text": message.text,
+                "Message Type": message_type,
+                "Is Forward": is_forward,
+                "Origin Username": original_username,
+                "Geo-location": geo_location,
+                "Hashtags": hashtags,
+                "URLs Shared": urls_shared,
+                "Reactions": reactions,
+                "Message URL": message_url,
+                "Views": message.views if message.views else None,
+                "Forwards": message.forwards if message.forwards else None,
+                "Replies": message.replies.replies if message.replies else "No Replies",
+                "Reply To Message Snippet": None,
+                "Reply To Message Sender": None,
+                "Grouped ID": str(message.grouped_id) if message.grouped_id else "Not Available",
+            }
+            channel_messages_data.append(message_data)
+        st.write(f"[DEBUG] Collected {len(channel_messages_data)} original messages for channel {channel_name}.")
+
+        # Fetch Replies (Nested Comments)
+        # Collect reply-fetching tasks for messages that have replies.
+        if include_comments:
+            reply_tasks = [
+                (message, client.get_messages(channel, reply_to=message.id, limit=100))
+                for message in total_messages if message.replies and message.replies.replies > 0
+            ]
+            st.write(f"[DEBUG] Found {len(reply_tasks)} messages with replies for channel {channel_name}.")
+            if reply_tasks:
+                # Unzip into two lists: original messages and their corresponding tasks.
+                msgs, tasks = zip(*reply_tasks)
+                # Run all reply-fetching tasks concurrently.
+                replies_results = await asyncio.gather(*tasks, return_exceptions=True)
+                # Process each set of replies.
+                for orig_message, replies in zip(msgs, replies_results):
+                    if isinstance(replies, Exception):
+                        print(f"Error fetching replies for message {orig_message.id}: {replies}")
+                    else:
+                        for reply in replies:
+                            reply_datetime = reply.date.replace(tzinfo=None) if reply.date else "Not Available"
+                            if reply.sender:
+                                reply_user_id = getattr(reply.sender, "id", "Not Available")
+                                reply_username = getattr(reply.sender, "username", "Not Available")
+                            else:
+                                reply_user_id = getattr(channel, "id", "Not Available")
+                                reply_username = getattr(channel, "username", "Not Available")
+                            reply_data = {
+                                "Channel": channel_name,
+                                "Message ID": reply.id,
+                                "Parent Message ID": orig_message.id,  # Reference to original message
+                                "Sender User ID": reply_user_id,
+                                "Sender Username": reply_username,
+                                "Message DateTime (UTC)": reply_datetime,
+                                "Text": reply.text,
+                                "Message Type": type(reply.media).__name__ if reply.media else "Text",
+                                "Is Forward": bool(reply.forward),
+                                "Origin Username": original_username,
+                                "Geo-location": f"{reply.geo.lat}, {reply.geo.long}" if reply.geo else "None",
+                                "Hashtags": [tag for tag in reply.text.split() if tag.startswith("#")] if reply.text else [],
+                                "URLs Shared": re.findall(r"(https?://\S+)", reply.text) if reply.text else [],
+                                "Reactions": sum([reaction.count for reaction in reply.reactions.results]) if reply.reactions else 0,
+                                "Message URL": f"https://t.me/{channel.username}/{reply.id}" if hasattr(channel, "username") else "No URL available",
+                                "Views": reply.views if reply.views else None,
+                                "Forwards": reply.forwards if reply.forwards else None,
+                                "Replies": reply.replies.replies if reply.replies else "No Replies",
+                                "Reply To Message Snippet": orig_message.text[:100] + "..." if orig_message.text else "No Text",
+                                "Reply To Message Sender": orig_message.sender.username if orig_message.sender and hasattr(orig_message.sender, "username") else "Not Available",
+                                "Grouped ID": str(reply.grouped_id) if reply.grouped_id else "Not Available",
+                            }
+                            channel_messages_data.append(reply_data)
+            else:
+                st.write("[DEBUG] No reply tasks to run for this channel.")            
+    # Add the channel's messages (original posts and replies) to the global collection.
+    all_messages_data.extend(channel_messages_data)
         
         
     # Convert to DataFrame

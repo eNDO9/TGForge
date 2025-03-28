@@ -9,7 +9,7 @@ from telethon.tl.types import PeerUser
 import streamlit as st
 
 
-async def fetch_messages(client, channel_list, start_date=None, end_date=None):
+async def fetch_messages(client, channel_list, start_date=None, end_date=None, include_comments=True):
     all_messages_data = []
     limit = 1000  
 
@@ -104,7 +104,7 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None):
                 }
                 
                 # Fetch Replies (Nested Comments)
-                if message.replies and message.replies.replies > 0:
+                if include_comments and message.replies and message.replies.replies > 0:
                     try:
                         replies = await client.get_messages(channel, reply_to=message.id, limit=100)
                         for reply in replies:

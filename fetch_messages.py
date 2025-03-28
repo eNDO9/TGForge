@@ -100,9 +100,7 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None, i
                 # Fetch Replies (Nested Comments)
                 if include_comments and message.replies and message.replies.replies > 0:
                     try:
-                        st.write(f"[DEBUG] Message {message.id} has {message.replies.replies} replies. Fetching replies...")
                         replies = await client.get_messages(channel, reply_to=message.id, limit=100)
-                        st.write(f"[DEBUG] Fetched {len(replies)} replies for message {message.id}.")
                         for reply in replies:
                             reply_datetime = reply.date.replace(tzinfo=None) if reply.date else "Not Available"
                 
@@ -137,7 +135,6 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None, i
                                 "Reply To Message Sender": message.sender.username if message.sender and hasattr(message.sender, "username") else "Not Available",
                                 "Grouped ID": str(reply.grouped_id) if reply.grouped_id else "Not Available",
                             }
-                            st.write(f"[DEBUG] Processed reply {reply.id} from sender {reply_username}.")
                             messages_data.append(reply_data)
                     except Exception as e:
                         print(f"Error fetching replies for message {message.id} in {channel_name}: {e}")
@@ -147,7 +144,6 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None, i
             all_messages_data.extend(messages_data)
 
         except Exception as e:
-            st.write(f"[DEBUG] Error fetching replies for message {message.id} in {channel_name}: {e}")
             print(f"Error fetching messages for {channel_name}: {e}")
 
     # Convert to DataFrame
@@ -294,8 +290,5 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None, i
     daily_volume = generate_daily_volume(df, start_date, end_date)
     weekly_volume = generate_weekly_volume(df, start_date, end_date)
     monthly_volume = generate_monthly_volume(df, start_date, end_date)
-
-    #st.text("DEBUG: Weekly Volume Before Returning:")
-    #st.text(weekly_volume)
 
     return df, top_hashtags_df, top_urls_df, top_domains_df, forward_counts_df, daily_volume, weekly_volume, monthly_volume

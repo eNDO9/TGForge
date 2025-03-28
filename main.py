@@ -115,14 +115,18 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
     # For Messages, Forwards, and Participants, allow optional date range filtering
     participant_method = "Default"
     start_date = end_date = None
+    include_comments = True  # Default to including comments
     if fetch_option in ["Messages", "Forwards", "Participants"]:
+        if fetch_option == "Messages":
+            # Add a new option for message mode
+            msg_mode = st.radio("Message Mode", ["Original posts only", "Original posts + comments (may take significantly longer to load)"])
+            include_comments = (msg_mode == "Original posts + comments")
         if fetch_option == "Participants":
             participant_method = st.radio("Select Participant Fetch Method:", ["Default", "Via Messages"])
         use_date_range = st.checkbox("Optional: Filter by Date Range", value=False)
         if use_date_range:
             start_date = st.date_input("Start Date")
             end_date = st.date_input("End Date")
-
     else:
         start_date = end_date = None
 
@@ -138,7 +142,7 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
             st.session_state.top_domains, st.session_state.forward_counts, st.session_state.daily_volume, \
             st.session_state.weekly_volume, st.session_state.monthly_volume = \
                 st.session_state.event_loop.run_until_complete(
-                    fetch_messages(st.session_state.client, channel_input.split(","), start_date, end_date)
+                    fetch_messages(st.session_state.client, channel_input.split(","), start_date, end_date, include_comments=include_comments)
                 )
     elif fetch_option == "Forwards":
         if st.button("Fetch Forwards"):

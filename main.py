@@ -118,9 +118,11 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
     include_comments = True  # Default to including comments
     if fetch_option in ["Messages", "Forwards", "Participants"]:
         if fetch_option == "Messages":
-            # Add a new option for message mode
-            msg_mode = st.radio("Message Mode", ["Original posts only", "Original posts + comments (may take significantly longer to load)"])
-            include_comments = (msg_mode == "Original posts + comments")
+            msg_mode = st.radio("Message Mode", [
+                "Original posts only", 
+                "Original posts + comments (may take significantly longer to load)"
+            ])
+            include_comments = "comments" in msg_mode.lower()
         if fetch_option == "Participants":
             participant_method = st.radio("Select Participant Fetch Method:", ["Default", "Via Messages"])
         use_date_range = st.checkbox("Optional: Filter by Date Range", value=False)

@@ -138,6 +138,8 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
             )
     elif fetch_option == "Messages":
         if st.button("Fetch Messages"):
+            # Debug: Print the selected message mode
+            st.write(f"[DEBUG] Message Mode: {msg_mode}, include_comments = {include_comments}")
             st.session_state.messages_data, st.session_state.top_hashtags, st.session_state.top_urls, \
             st.session_state.top_domains, st.session_state.forward_counts, st.session_state.daily_volume, \
             st.session_state.weekly_volume, st.session_state.monthly_volume = \

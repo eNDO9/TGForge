@@ -100,7 +100,9 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None, i
                 # Fetch Replies (Nested Comments)
                 if include_comments and message.replies and message.replies.replies > 0:
                     try:
+                        st.write(f"[DEBUG] Message {message.id} has {message.replies.replies} replies. Fetching replies...")
                         replies = await client.get_messages(channel, reply_to=message.id, limit=100)
+                        st.write(f"[DEBUG] Fetched {len(replies)} replies for message {message.id}.")
                         for reply in replies:
                             reply_datetime = reply.date.replace(tzinfo=None) if reply.date else "Not Available"
                 
@@ -135,16 +137,17 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None, i
                                 "Reply To Message Sender": message.sender.username if message.sender and hasattr(message.sender, "username") else "Not Available",
                                 "Grouped ID": str(reply.grouped_id) if reply.grouped_id else "Not Available",
                             }
+                            st.write(f"[DEBUG] Processed reply {reply.id} from sender {reply_username}.")
                             messages_data.append(reply_data)
                     except Exception as e:
                         print(f"Error fetching replies for message {message.id} in {channel_name}: {e}")
                         
                 messages_data.append(message_data)
-
             print(f"Finished processing messages for {channel_name}. Total messages collected: {len(messages_data)}\n")
             all_messages_data.extend(messages_data)
 
         except Exception as e:
+            st.write(f"[DEBUG] Error fetching replies for message {message.id} in {channel_name}: {e}")
             print(f"Error fetching messages for {channel_name}: {e}")
 
     # Convert to DataFrame

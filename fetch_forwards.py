@@ -105,7 +105,7 @@ async def fetch_forwards(client, channel_list, start_date=None, end_date=None):
                     messages_data.append(message_data)
 
 
-            progress_text.write(f"Collected {len(total_messages)} messages and {len(messages_data)} forwards for channel {channel_name}.")
+            progress_text.write(f"Collected {len(messages_data)} forwards (out of {len(total_messages)} messages) for channel {channel_name}.")
             all_messages_data.extend(messages_data)
 
         except Exception as e:

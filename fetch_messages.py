@@ -7,6 +7,7 @@ from urllib.parse import urlparse
 from telethon.errors import FloodWaitError, RpcCallFailError
 from telethon.tl.types import PeerUser
 import streamlit as st
+import asyncio
 
 async def fetch_messages(client, channel_list, start_date=None, end_date=None, include_comments=True):
     all_messages_data = []

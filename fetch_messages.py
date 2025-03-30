@@ -3,10 +3,23 @@ import time
 import re
 from collections import Counter
 from urllib.parse import urlparse
-from telethon.errors import FloodWaitError, RpcCallFailError
-from telethon.tl.types import PeerUser
+from telethon.errors import FloodWaitError
 import streamlit as st
+from tenacity import retry, wait_func, stop_after_attempt, retry_if_exception_type, RetryCallState
 
+def wait_for_flood(retry_state: RetryCallState) -> float:
+    # If the exception is a FloodWaitError, use its recommended wait time plus a small buffer.
+    exc = retry_state.outcome.exception()
+    if isinstance(exc, FloodWaitError):
+        return exc.seconds + 1
+    return 1  # Fallback wait time
+
+@retry(
+    retry=retry_if_exception_type(FloodWaitError),
+    wait=wait_func(wait_for_flood),
+    stop=stop_after_attempt(5)
+)
+    
 async def fetch_messages(client, channel_list, start_date=None, end_date=None, include_comments=True):
     all_messages_data = []
     limit = 1000  

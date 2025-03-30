@@ -25,19 +25,32 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None, i
     limit = 1000  
     
     for channel_name in channel_list:
+        st.write(f"Processing channel: **{channel_name}**")
+        progress_text = st.empty()
+        
         channel = await client.get_entity(channel_name)
         offset_id = 0
         total_messages = []
+        
         try:
             while True:
                 messages = await client.get_messages(channel, limit=limit, offset_id=offset_id)
                 if not messages:
+                    progress_text.write("No more messages in this batch.")
                     break
+                
+                # Update the progress message with a batch summary.
+                first_date = messages[0].date.replace(tzinfo=None) if messages[0].date else "Unknown"
+                last_date = messages[-1].date.replace(tzinfo=None) if messages[-1].date else "Unknown"
+                progress_text.write(f"Processing messages from {first_date.date()} to {last_date.date()}")
+                
                 stop_fetching = False  # Flag to stop if we go before the start_date
+                
                 for message in messages:
                     message_datetime = message.date.replace(tzinfo=None) if message.date else None
                     # If we've reached messages older than our start_date, break out of the loop.
                     if start_date and message_datetime and message_datetime.date() < start_date:
+                        progress_text.write("Reached messages older than the start date.")
                         stop_fetching = True
                         break
                     # Only add messages within the specified range
@@ -49,12 +62,14 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None, i
 
                 # Inside your while loop in fetch_messages.py:
                 offset_id = messages[-1].id if messages else offset_id
-                time.sleep(1)
 
                 # Check if a cancel flag was set:
                 if st.session_state.get("cancel_fetch", False):
+                    progress_text.write("Canceled by user.")
                     break
 
+            st.write(f"Collected {len(total_messages)} messages for channel {channel_name}.")
+            
             # Process messages
             messages_data = []
             for message in total_messages:
@@ -150,9 +165,8 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None, i
                             messages_data.append(reply_data)
                     except Exception as e:
                         print(f"Error fetching replies for message {message.id} in {channel_name}: {e}")
-                        
                 messages_data.append(message_data)
-            print(f"Finished processing messages for {channel_name}. Total messages collected: {len(messages_data)}\n")
+            st.write(f"Finished processing messages for {channel_name}. Total messages collected: {len(messages_data)}\n")
             all_messages_data.extend(messages_data)
 
         except Exception as e:

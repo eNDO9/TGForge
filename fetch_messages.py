@@ -5,7 +5,7 @@ from collections import Counter
 from urllib.parse import urlparse
 from telethon.errors import FloodWaitError
 import streamlit as st
-from tenacity import retry, wait_func, stop_after_attempt, retry_if_exception_type, RetryCallState
+from tenacity import retry, wait, stop_after_attempt, retry_if_exception_type, RetryCallState
 
 def wait_for_flood(retry_state: RetryCallState) -> float:
     # If the exception is a FloodWaitError, use its recommended wait time plus a small buffer.
@@ -16,7 +16,7 @@ def wait_for_flood(retry_state: RetryCallState) -> float:
 
 @retry(
     retry=retry_if_exception_type(FloodWaitError),
-    wait=wait_func(wait_for_flood),
+    wait=lambda retry_state: retry_state.outcome.exception().seconds + 1 if isinstance(retry_state.outcome.exception(), FloodWaitError) else 1,
     stop=stop_after_attempt(5)
 )
     

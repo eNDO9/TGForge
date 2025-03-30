@@ -9,22 +9,36 @@ async def fetch_forwards(client, channel_list, start_date=None, end_date=None):
     limit = 1000  
 
     for channel_name in channel_list:
-        channel = await client.get_entity(channel_name)
-        offset_id = 0
-        total_messages = []
+        try:
+            channel = await client.get_entity(channel_name)
+            progress_text = st.empty()
+            progress_text.write(f"Processing channel: **{channel_name}**")
+            offset_id = 0
+            total_messages = []
+        except ValueError:
+            st.error(f"Channel '{channel_name}' does not exist. Skipping.")
+            continue
 
         try:
             while True:
                 messages = await client.get_messages(channel, limit=limit, offset_id=offset_id)
                 if not messages:
+                    progress_text.write("No more messages in this batch.")
                     break
 
+                # Update the progress message with a batch summary.
+                first_date = messages[0].date.replace(tzinfo=None) if messages[0].date else "Unknown"
+                last_date = messages[-1].date.replace(tzinfo=None) if messages[-1].date else "Unknown"
+                progress_text.write(f"Processing messages from {first_date.date()} to {last_date.date()}")
+                
                 stop_fetching = False  # Flag to stop if we go before the start_date
+                
                 for message in messages:
                     message_datetime = message.date.replace(tzinfo=None) if message.date else None
                     
                     # If we've reached messages older than our start_date, break out of the loop.
                     if start_date and message_datetime and message_datetime.date() < start_date:
+                        progress_text.write("Reached messages older than the start date.")
                         stop_fetching = True
                         break
 
@@ -42,8 +56,11 @@ async def fetch_forwards(client, channel_list, start_date=None, end_date=None):
 
                 # Check if a cancel flag was set:
                 if st.session_state.get("cancel_fetch", False):
+                    progress_text.write("Canceled by user.")
                     break
 
+            progress_text.write(f"Collected {len(total_messages)} messages for channel {channel_name}.")
+            
             # Process messages
             messages_data = []
             for message in total_messages:

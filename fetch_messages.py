@@ -171,12 +171,12 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None, i
                             
                             messages_data.append(reply_data)
                     except Exception as e:
-                        print(f"Error fetching replies for message {message.id} in {channel_name}: {e}")
+                        progress_text.write(f"Error fetching replies for message {message.id} in {channel_name}: {e}")
                 messages_data.append(message_data)
             all_messages_data.extend(messages_data)
 
         except Exception as e:
-            print(f"Error fetching messages for {channel_name}: {e}")
+            progress_text.write(f"Error fetching messages for {channel_name}: {e}")
 
     # Convert to DataFrame
     df = pd.DataFrame(all_messages_data)

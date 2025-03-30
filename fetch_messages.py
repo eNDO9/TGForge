@@ -25,13 +25,16 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None, i
     limit = 1000  
     
     for channel_name in channel_list:
-        st.write(f"Processing channel: **{channel_name}**")
-        progress_text = st.empty()
-        
-        channel = await client.get_entity(channel_name)
-        offset_id = 0
-        total_messages = []
-        
+        try:
+            channel = await client.get_entity(channel_name)
+            st.write(f"Processing channel: **{channel_name}**")
+            progress_text = st.empty()
+            offset_id = 0
+            total_messages = []
+        except ValueError:
+            st.error(f"Channel '{channel_name}' does not exist. Skipping.")
+            continue
+
         try:
             while True:
                 messages = await client.get_messages(channel, limit=limit, offset_id=offset_id)

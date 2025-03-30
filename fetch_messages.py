@@ -96,7 +96,7 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None, i
             }
             channel_messages_data.append(message_data)
         st.write(f"[DEBUG] Collected {len(channel_messages_data)} original messages for channel {channel_name}.")
-
+        
         # If including comments, fetch replies concurrently.
         if include_comments:
             # Build a list of reply tasks for messages that have replies.
@@ -106,10 +106,15 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None, i
             ]
             st.write(f"[DEBUG] Found {len(reply_tasks)} messages with replies for channel {channel_name}.")
             if reply_tasks:
-                # Unzip into two lists: one of original messages, one of the corresponding reply-fetch tasks.
+                # Unzip into two lists: one of original messages and one of the corresponding reply-fetch tasks.
                 msgs, tasks = zip(*reply_tasks)
-                # Run all reply-fetching tasks concurrently.
-                replies_results = await asyncio.gather(*tasks, return_exceptions=True)
+                st.write(f"[DEBUG] Prepared {len(tasks)} reply tasks: {tasks}")
+                try:
+                    replies_results = await asyncio.gather(*tasks, return_exceptions=True)
+                    st.write(f"[DEBUG] Gathered replies results: {replies_results}")
+                except Exception as gather_error:
+                    st.write(f"[DEBUG] Exception during asyncio.gather: {gather_error}")
+                    replies_results = []
                 # Process each set of replies.
                 for orig_message, replies in zip(msgs, replies_results):
                     if isinstance(replies, Exception):
@@ -127,7 +132,7 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None, i
                             reply_data = {
                                 "Channel": channel_name,
                                 "Message ID": reply.id,
-                                "Parent Message ID": orig_message.id,
+                                "Parent Message ID": orig_message.id,  # Reference to original message
                                 "Sender User ID": reply_user_id,
                                 "Sender Username": reply_username,
                                 "Message DateTime (UTC)": reply_datetime,
@@ -150,6 +155,7 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None, i
                             channel_messages_data.append(reply_data)
             else:
                 st.write("[DEBUG] No reply tasks to run for this channel.")
+
         # Append this channel's messages (original + replies) to the global collection.
         all_messages_data.extend(channel_messages_data)
         

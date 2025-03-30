@@ -129,12 +129,14 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None, i
                 if include_comments and message.replies and message.replies.replies > 0:
                     try:
                         replies = await client.get_messages(channel, reply_to=message.id, limit=100)
+                        progress_text.write(f" Processing replies for message ID {message.id}")
                         for reply in replies:
                             reply_datetime = reply.date.replace(tzinfo=None) if reply.date else "Not Available"
                 
                             if reply.sender:
                                 reply_user_id = getattr(reply.sender, "id", "Not Available")
                                 reply_username = getattr(reply.sender, "username", "Not Available")
+                            
                             else:
                                 # For a reply from a channel, use the channel's details
                                 reply_user_id = getattr(channel, "id", "Not Available")
@@ -163,11 +165,11 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None, i
                                 "Reply To Message Sender": message.sender.username if message.sender and hasattr(message.sender, "username") else "Not Available",
                                 "Grouped ID": str(reply.grouped_id) if reply.grouped_id else "Not Available",
                             }
+                            
                             messages_data.append(reply_data)
                     except Exception as e:
                         print(f"Error fetching replies for message {message.id} in {channel_name}: {e}")
                 messages_data.append(message_data)
-            st.write(f"Finished processing messages for {channel_name}. Total messages collected: {len(messages_data)}\n")
             all_messages_data.extend(messages_data)
 
         except Exception as e:

@@ -27,8 +27,8 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None, i
     for channel_name in channel_list:
         try:
             channel = await client.get_entity(channel_name)
-            progress_text.write(f"Processing channel: **{channel_name}**")
             progress_text = st.empty()
+            progress_text.write(f"Processing channel: **{channel_name}**")
             offset_id = 0
             total_messages = []
         except ValueError:

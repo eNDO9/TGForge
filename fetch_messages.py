@@ -32,7 +32,7 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None, i
             offset_id = 0
             total_messages = []
         except ValueError:
-            st.error(f"Channel '{channel_name}' does not exist. Skipping.")
+            st.error(f"Channel '**{channel_name}**' does not exist. Skipping.")
             continue
 
         try:
@@ -45,7 +45,7 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None, i
                 # Update the progress message with a batch summary.
                 first_date = messages[0].date.replace(tzinfo=None) if messages[0].date else "Unknown"
                 last_date = messages[-1].date.replace(tzinfo=None) if messages[-1].date else "Unknown"
-                progress_text.write(f"Processing messages for {channel_name} from {first_date.date()} to {last_date.date()}")
+                progress_text.write(f"Processing messages for **{channel_name}** from {first_date.date()} to {last_date.date()}")
                 
                 stop_fetching = False  # Flag to stop if we go before the start_date
                 
@@ -72,7 +72,7 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None, i
                     progress_text.write("Canceled by user.")
                     break
 
-            progress_text.write(f"Collected {len(total_messages)} messages for channel {channel_name}.")
+            progress_text.write(f"Collected {len(total_messages)} messages for channel **{channel_name}.**")
             
             # Process messages
             messages_data = []

@@ -347,17 +347,14 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
         show_total = st.toggle(f"Show aggregated total for {title}", value=False)
 
         if show_total:
-            df["Total"] = df.iloc[:, 1:].sum(axis=1)
+            # ✅ Sum all columns to show aggregated total
+            df["Total"] = df.iloc[:, 1:].sum(axis=1)  # Sum all channels
             df = df[[index_col, "Total"]]
-            colors = ["#C7074D"]
+            colors = ["#C7074D"]  # ✅ Use only one color for total view
         else:
+            # ✅ Ensure the number of colors matches the number of columns
             num_lines = df.shape[1] - 1  # Excluding the index column
-            custom_colors = COLOR_PALETTE
-            if num_lines > len(custom_colors):
-                # For channels beyond your custom palette, use None so Streamlit applies its default colors.
-                colors = custom_colors + [None] * (num_lines - len(custom_colors))
-            else:
-                colors = custom_colors[:num_lines]
+            colors = COLOR_PALETTE[:num_lines] if num_lines <= len(COLOR_PALETTE) else None  # Avoid mismatch
 
         # ✅ Plot the chart with dynamically assigned colors
         st.line_chart(df.set_index(index_col), color=colors)

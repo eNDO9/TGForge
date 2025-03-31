@@ -45,7 +45,7 @@ async def fetch_messages(client, channel_list, start_date=None, end_date=None, i
                 # Update the progress message with a batch summary.
                 first_date = messages[0].date.replace(tzinfo=None) if messages[0].date else "Unknown"
                 last_date = messages[-1].date.replace(tzinfo=None) if messages[-1].date else "Unknown"
-                progress_text.write(f"Processing messages from {first_date.date()} to {last_date.date()}")
+                progress_text.write(f"Processing messages for {channel_name} from {first_date.date()} to {last_date.date()}")
                 
                 stop_fetching = False  # Flag to stop if we go before the start_date
                 

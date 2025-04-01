@@ -427,7 +427,6 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
 
         output_xlsx_forwards = io.BytesIO()
         with pd.ExcelWriter(output_xlsx_forwards, engine="openpyxl") as writer:
-            df_forwards.to_excel(writer, sheet_name="Forwarded Messages", index=False)
             df_forward_counts.to_excel(writer, sheet_name="Forward Counts", index=False)
         output_xlsx_forwards.seek(0)
 

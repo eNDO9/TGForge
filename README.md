@@ -46,7 +46,7 @@ Issues:
 
 **Messages**
 - **What It Does:** Collects all messages from the selected channel(s) or group(s). 
-- **How to Use:** Separate multiple channels with commas (e.g., durov, washingtonpost). By default, it collects all posts. You can optionally filter by a specific date range.
+- **How to Use:** Separate multiple channels with commas (e.g., durov, washingtonpost). By default, it collects all posts. You can optionally filter by a specific date range and/or by whether you want to collect only original posts or also comments (when available).
 - **Output:** Download options are available for both a CSV file (raw messages) and an Excel file (analytics).
 
 **Forwards**

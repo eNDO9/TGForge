@@ -327,6 +327,9 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
     # ✅ Define color palette
     COLOR_PALETTE = ["#C7074D", "#B4B2B1", "#4C4193", "#0068B2", "#E76863", "#5C6771"]
 
+    def convert_df_to_markdown(df):
+        return df.to_markdown(index=False, tablefmt="github")
+
     def plot_vot_chart(df, index_col, title, freq="D"):
         """Plots a line chart, ensuring missing dates are filled with 0s and colors adjust dynamically."""
         st.subheader(title)
@@ -378,16 +381,42 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
     # CSV Download
     if "messages_data" in st.session_state and st.session_state.messages_data is not None:
         df_messages = pd.DataFrame(st.session_state.messages_data)
+    
+        st.subheader("📤 Export Messages Data")
+        format_option = st.selectbox("Choose export format:", ["CSV", "Markdown", "Excel"], key="messages_export_format")
+    
+        if format_option == "CSV":
+            csv_output = io.BytesIO()
+            df_messages.to_csv(csv_output, index=False)
+            csv_output.seek(0)
+            st.download_button(
+                "📥 Download as CSV",
+                data=csv_output.getvalue(),
+                file_name="messages.csv",
+                mime="text/csv",
+            )
+    
+        elif format_option == "Markdown":
+            markdown_output = convert_df_to_markdown(df_messages.head(1000))  # Limit size if needed
+            st.download_button(
+                "📥 Download as Markdown",
+                data=markdown_output,
+                file_name="messages.md",
+                mime="text/markdown",
+            )
+    
+        elif format_option == "Excel":
+            output_xlsx = io.BytesIO()
+            with pd.ExcelWriter(output_xlsx, engine="openpyxl") as writer:
+                df_messages.to_excel(writer, sheet_name="Messages", index=False)
+            output_xlsx.seek(0)
+            st.download_button(
+                "📥 Download as Excel",
+                data=output_xlsx.getvalue(),
+                file_name="messages.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
 
-        csv_output = io.BytesIO()
-        df_messages.to_csv(csv_output, index=False)
-        csv_output.seek(0)
-        st.download_button(
-            "📥 Download Messages (CSV)",
-            data=csv_output.getvalue(),
-            file_name="messages.csv",
-            mime="text/csv",
-        )
 
     # XLSX Download
     if "messages_data" in st.session_state and st.session_state.messages_data is not None:
@@ -421,24 +450,48 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
         )
 
     elif "forwards_data" in st.session_state and st.session_state.forwards_data is not None:
-        # Build XLSX for forwards analytics
         df_forwards = pd.DataFrame(st.session_state.forwards_data)
         df_forward_counts = pd.DataFrame(st.session_state.forward_counts)
+    
+        st.subheader("📤 Export Forwards Data")
+        format_option = st.selectbox("Choose export format:", ["CSV", "Markdown", "Excel"], key="forwards_export_format")
+    
+        if format_option == "CSV":
+            csv_output = io.BytesIO()
+            df_forwards.to_csv(csv_output, index=False)
+            csv_output.seek(0)
+            st.download_button(
+                "📥 Download as CSV",
+                data=csv_output.getvalue(),
+                file_name="forwards.csv",
+                mime="text/csv",
+            )
+    
+        elif format_option == "Markdown":
+            markdown_output = convert_df_to_markdown(df_forwards.head(1000))
+            st.download_button(
+                "📥 Download as Markdown",
+                data=markdown_output,
+                file_name="forwards.md",
+                mime="text/markdown",
+            )
+    
+        elif format_option == "Excel":
+            output_xlsx = io.BytesIO()
+            with pd.ExcelWriter(output_xlsx, engine="openpyxl") as writer:
+                df_forwards.to_excel(writer, sheet_name="Forwarded Messages", index=False)
+                df_forward_counts.to_excel(writer, sheet_name="Forward Counts", index=False)
+            output_xlsx.seek(0)
+            st.download_button(
+                "📥 Download as Excel",
+                data=output_xlsx.getvalue(),
+                file_name="forwards_analysis.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
 
-        output_xlsx_forwards = io.BytesIO()
-        with pd.ExcelWriter(output_xlsx_forwards, engine="openpyxl") as writer:
-            df_forward_counts.to_excel(writer, sheet_name="Forward Counts", index=False)
-        output_xlsx_forwards.seek(0)
-
-        st.download_button(
-            "📥 Download Forwards Data (Excel)",
-            data=output_xlsx_forwards.getvalue(),
-            file_name="forwards_analysis.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        )
     elif "participants_data" in st.session_state and not pd.DataFrame(st.session_state.participants_data).empty:
         df_participants = pd.DataFrame(st.session_state.participants_data)
-        # (Recreate the aggregated view as above)
+    
         user_cols = [
             "User ID", "Deleted", "Is Bot", "Verified", "Restricted", "Scam", "Fake", 
             "Premium", "Access Hash", "First Name", "Last Name", "Username", "Phone", 
@@ -462,18 +515,43 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
         else:
             aggregated["Group Count"] = 0
             aggregated["Groups"] = ""
-
-        output_xlsx_participants = io.BytesIO()
-        with pd.ExcelWriter(output_xlsx_participants, engine="openpyxl") as writer:
-            df_participants.to_excel(writer, sheet_name="Raw Participants", index=False)
-            aggregated.to_excel(writer, sheet_name="Aggregated Participants", index=False)
-        output_xlsx_participants.seek(0)
-        st.download_button(
-            "📥 Download Participants Data (Excel)",
-            data=output_xlsx_participants.getvalue(),
-            file_name="participants_analysis.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
+    
+        st.subheader("📤 Export Participants Data")
+        format_option = st.selectbox("Choose export format:", ["CSV", "Markdown", "Excel"], key="participants_export_format")
+    
+        if format_option == "CSV":
+            csv_output = io.BytesIO()
+            aggregated.to_csv(csv_output, index=False)
+            csv_output.seek(0)
+            st.download_button(
+                "📥 Download as CSV",
+                data=csv_output.getvalue(),
+                file_name="participants.csv",
+                mime="text/csv",
+            )
+    
+        elif format_option == "Markdown":
+            markdown_output = convert_df_to_markdown(aggregated.head(1000))
+            st.download_button(
+                "📥 Download as Markdown",
+                data=markdown_output,
+                file_name="participants.md",
+                mime="text/markdown",
+            )
+    
+        elif format_option == "Excel":
+            output_xlsx_participants = io.BytesIO()
+            with pd.ExcelWriter(output_xlsx_participants, engine="openpyxl") as writer:
+                df_participants.to_excel(writer, sheet_name="Raw Participants", index=False)
+                aggregated.to_excel(writer, sheet_name="Aggregated Participants", index=False)
+            output_xlsx_participants.seek(0)
+            st.download_button(
+                "📥 Download as Excel",
+                data=output_xlsx_participants.getvalue(),
+                file_name="participants_analysis.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+            
 st.markdown(
     """
     <div style="text-align: center; margin-top: 50px;">

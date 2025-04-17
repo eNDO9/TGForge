@@ -421,6 +421,7 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
     
     # XLSX Download
     if "messages_data" in st.session_state and st.session_state.messages_data is not None:
+        st.subheader("Export Channel(s) Analytics")
         # Build XLSX for message analytics
         df_messages = pd.DataFrame(st.session_state.messages_data).nlargest(50, "Views")  # Top 50 most viewed messages
         df_top_domains = pd.DataFrame(st.session_state.top_domains).head(25)               # Top 25 shared domains
@@ -451,6 +452,7 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
         )
 
     elif "forwards_data" in st.session_state and st.session_state.forwards_data is not None:
+        st.subheader("Export Channel(s) Analytics")
         df_forwards = pd.DataFrame(st.session_state.forwards_data)
         df_forward_counts = pd.DataFrame(st.session_state.forward_counts)
     
@@ -491,6 +493,7 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
             )
 
     elif "participants_data" in st.session_state and not pd.DataFrame(st.session_state.participants_data).empty:
+        st.subheader("Export Channel(s) Analytics")
         df_participants = pd.DataFrame(st.session_state.participants_data)
     
         user_cols = [

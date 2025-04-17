@@ -444,7 +444,7 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
         output_xlsx.seek(0)
 
         st.download_button(
-            "📥 Download Messages Data (Excel)",
+            "📥 Download Analytics",
             data=output_xlsx.getvalue(),
             file_name="messages_analysis.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

@@ -416,8 +416,6 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
                 file_name="messages.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             )
-
-    st.subheader("Export Channel(s) Analytics")
     
     # XLSX Download
     if "messages_data" in st.session_state and st.session_state.messages_data is not None:

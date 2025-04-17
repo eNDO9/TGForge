@@ -6,3 +6,4 @@ streamlit
 python-docx
 openpyxl
 tenacity
+tabulate

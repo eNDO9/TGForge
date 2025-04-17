@@ -382,8 +382,8 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
     if "messages_data" in st.session_state and st.session_state.messages_data is not None:
         df_messages = pd.DataFrame(st.session_state.messages_data)
     
-        st.subheader("📤 Export Messages Data")
-        format_option = st.selectbox("Choose export format:", ["CSV", "Markdown", "Excel"], key="messages_export_format")
+        st.subheader("Export Raw Data")
+        format_option = st.selectbox("Choose export format for raw Telegram data:", ["CSV", "Markdown", "Excel"], key="messages_export_format")
     
         if format_option == "CSV":
             csv_output = io.BytesIO()
@@ -417,7 +417,8 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             )
 
-
+    st.subheader("Export Channel(s) Analytics")
+    
     # XLSX Download
     if "messages_data" in st.session_state and st.session_state.messages_data is not None:
         # Build XLSX for message analytics

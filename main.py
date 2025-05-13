@@ -9,6 +9,7 @@ from fetch_messages import fetch_messages
 from fetch_participants import fetch_participants
 from telethon.errors import PhoneNumberInvalidError, PhoneCodeInvalidError, SessionPasswordNeededError
 import nest_asyncio
+import re
 
 nest_asyncio.apply()
 
@@ -21,6 +22,10 @@ if "event_loop" not in st.session_state:
     asyncio.set_event_loop(st.session_state.event_loop)
 else:
     asyncio.set_event_loop(st.session_state.event_loop)  # Keep the same event loop
+
+def clean_column_name(name):
+    # Replace anything that's not a letter, number, or underscore with an underscore
+    return re.sub(r'[^a-zA-Z0-9_]', '_', str(name))
 
 # --- Streamlit UI ---
 st.title("TGForge")
@@ -357,7 +362,7 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
     
         df_plot = df.set_index(index_col)
         df_plot = df_plot.select_dtypes(include=["number"])
-        df_plot.columns = [str(c).replace(":", "_") for c in df_plot.columns]
+        df_plot.columns = [clean_column_name(c) for c in df_plot.columns]
     
         st.line_chart(df_plot, color=colors)
 

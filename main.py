@@ -26,7 +26,7 @@ else:
 def clean_column_name(name):
     name = str(name)
     # Step 1: Remove everything up to and including 't.me/'
-    name = re.sub(r'^.*t.me/', '', name)
+    name = re.sub(r'^.*t\.me/', '', name)
     # Step 2: Replace disallowed characters with underscores (allow letters, numbers, _ and -)
     name = re.sub(r'[^a-zA-Z0-9_\-]', '_', name)
     return name

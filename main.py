@@ -24,8 +24,12 @@ else:
     asyncio.set_event_loop(st.session_state.event_loop)  # Keep the same event loop
 
 def clean_column_name(name):
-    # Replace anything that's not a letter, number, or underscore with an underscore
-    return re.sub(r'[^a-zA-Z0-9_]', '_', str(name))
+    name = str(name)
+    # Step 1: Remove everything up to and including 't.me/'
+    name = re.sub(r'^.*t\.me/', '', name)
+    # Step 2: Replace disallowed characters with underscores (allow letters, numbers, _ and -)
+    name = re.sub(r'[^a-zA-Z0-9_\-]', '_', name)
+    return name
 
 # --- Streamlit UI ---
 st.title("TGForge")

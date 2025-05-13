@@ -331,36 +331,35 @@ elif st.session_state.auth_step == 3 and st.session_state.authenticated:
         return df.to_markdown(index=False, tablefmt="github")
 
     def plot_vot_chart(df, index_col, title, freq="D"):
-        """Plots a line chart, ensuring missing dates are filled with 0s and colors adjust dynamically."""
         st.subheader(title)
-
+    
         if df.empty:
             st.warning("No data available.")
             return
-
+    
+        df[index_col] = pd.to_datetime(df[index_col], errors="coerce")
         df = df.set_index(index_col)
-
-        # ✅ Generate a full date range (Daily, Weekly, Monthly)
+    
         full_range = pd.date_range(start=df.index.min(), end=df.index.max(), freq=freq)
-        df = df.reindex(full_range, fill_value=0)  # ✅ Fill missing dates with 0s
-        df.index.name = index_col  # ✅ Rename index to match expected format
+        df = df.reindex(full_range, fill_value=0)
+        df.index.name = index_col
         df.reset_index(inplace=True)
-
-        # ✅ Allow user to toggle between showing individual lines vs aggregated total
+    
         show_total = st.toggle(f"Show aggregated total for {title}", value=False)
-
+    
         if show_total:
-            # ✅ Sum all columns to show aggregated total
-            df["Total"] = df.iloc[:, 1:].sum(axis=1)  # Sum all channels
+            df["Total"] = df.select_dtypes(include=["number"]).iloc[:, 1:].sum(axis=1)
             df = df[[index_col, "Total"]]
-            colors = ["#C7074D"]  # ✅ Use only one color for total view
+            colors = ["#C7074D"]
         else:
-            # ✅ Ensure the number of colors matches the number of columns
-            num_lines = df.shape[1] - 1  # Excluding the index column
-            colors = COLOR_PALETTE[:num_lines] if num_lines <= len(COLOR_PALETTE) else None  # Avoid mismatch
-
-        # ✅ Plot the chart with dynamically assigned colors
-        st.line_chart(df.set_index(index_col), color=colors)
+            num_lines = df.shape[1] - 1
+            colors = COLOR_PALETTE[:num_lines] if num_lines <= len(COLOR_PALETTE) else None
+    
+        df_plot = df.set_index(index_col)
+        df_plot = df_plot.select_dtypes(include=["number"])
+        df_plot.columns = [str(c).replace(":", "_") for c in df_plot.columns]
+    
+        st.line_chart(df_plot, color=colors)
 
     # ✅ Show Volume Over Time Charts with Missing Dates Filled
     if "daily_volume" in st.session_state:
